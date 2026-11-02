@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luck Society · Sharp Money Scanner</title>
+<meta name="description" content="Live open positions of Polymarket's most profitable sports & esports traders.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23d9a627'/%3E%3Cg fill='%231c8f3f'%3E%3Ccircle cx='24' cy='24' r='9'/%3E%3Ccircle cx='40' cy='24' r='9'/%3E%3Ccircle cx='24' cy='40' r='9'/%3E%3Ccircle cx='40' cy='40' r='9'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07080a; --bg2:#0d0f12; --card:#111418; --card2:#161a1f; --line:#232830; --line2:#2e343d;
+  --gold:#e3b23c; --gold-hi:#ffe08a; --gold-lo:#9c6f12; --green:#22b35a; --green-hi:#4fe08a; --red:#ff5a5f;
+  --text:#f3efe4; --muted:#9a9a91; --dim:#6b6d6a;
+  --deco: 'Limelight', Georgia, serif; --sans:'Manrope', system-ui, sans-serif; --mono:'JetBrains Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;
+  background:
+    radial-gradient(1200px 500px at 50% -120px, rgba(227,178,60,.18), transparent 70%),
+    radial-gradient(700px 300px at 15% 0%, rgba(34,179,90,.08), transparent 70%),
+    var(--bg);}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+/* ---------- HERO ---------- */
+header.hero{position:relative;overflow:hidden;border-bottom:1px solid rgba(227,178,60,.25)}
+.skyline{position:absolute;inset:auto 0 0 0;height:150px;opacity:.55;pointer-events:none}
+.hero-inner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:38px 0 30px}
+.coin{width:84px;height:84px;filter:drop-shadow(0 0 22px rgba(227,178,60,.45))}
+h1{font-family:var(--deco);font-weight:400;font-size:clamp(40px,7vw,72px);letter-spacing:.06em;margin:14px 0 2px;line-height:1;
+  background:linear-gradient(180deg,var(--gold-hi) 0%,var(--gold) 45%,var(--gold-lo) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 30px rgba(227,178,60,.15)}
+.tag{font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);opacity:.9;margin-top:6px}
+.tag b{color:var(--green-hi);font-weight:700}
+.deco-rule{display:flex;align-items:center;gap:12px;color:var(--gold);margin:18px 0 22px;opacity:.8}
+.deco-rule span{display:block;width:90px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+.deco-rule span:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+
+/* SCAN BUTTON */
+.scan{position:relative;font-family:var(--deco);font-size:30px;letter-spacing:.24em;padding:18px 54px 18px 62px;border-radius:999px;cursor:pointer;
+  color:#1a1305;border:0;
+  background:linear-gradient(180deg,#fff0b3 0%,#f0c24b 35%,#c98e1b 70%,#8f6110 100%);
+  box-shadow:0 0 0 2px #5e400a, 0 0 0 5px rgba(227,178,60,.35), 0 12px 40px rgba(227,178,60,.35), inset 0 2px 0 rgba(255,255,255,.6), inset 0 -3px 0 rgba(0,0,0,.25);
+  transition:transform .12s ease, box-shadow .2s ease, filter .2s}
+.scan:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 0 0 2px #5e400a,0 0 0 7px rgba(227,178,60,.4),0 16px 60px rgba(227,178,60,.5),inset 0 2px 0 rgba(255,255,255,.6),inset 0 -3px 0 rgba(0,0,0,.25)}
+.scan:active{transform:translateY(1px)}
+.scan:disabled{cursor:progress;filter:saturate(.6) brightness(.85)}
+.scan.busy::after{content:"";position:absolute;inset:-6px;border-radius:999px;border:2px solid transparent;border-top-color:var(--green-hi);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scan-sub{margin-top:14px;font-size:13px;color:var(--muted);min-height:18px}
+.progress{width:min(420px,90%);height:4px;border-radius:4px;background:#1b1f24;margin:10px auto 0;overflow:hidden;opacity:0;transition:opacity .2s}
+.progress.on{opacity:1}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--gold));transition:width .25s}
+
+/* ---------- STATS ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 8px}
+.stat{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}
+.stat .k{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:6px}
+.stat .v.gold{color:var(--gold-hi)} .stat .v.pos{color:var(--green-hi)} .stat .v.neg{color:var(--red)}
+
+/* ---------- CONTROLS ---------- */
+.controls{position:sticky;top:0;z-index:5;background:rgba(7,8,10,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:18px -16px 0;padding:12px 16px}
+.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;font-size:13px;font-weight:700;letter-spacing:.04em;padding:8px 14px;border-radius:999px;border:1px solid var(--line2);background:var(--card);color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab .n{font-family:var(--mono);font-weight:400;opacity:.7;margin-left:6px}
+.tab:hover{color:var(--text);border-color:#444b55}
+.tab.on{color:#1a1305;background:linear-gradient(180deg,var(--gold-hi),var(--gold));border-color:var(--gold)}
+.tab.on .n{opacity:.8}
+.row2{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
+.seg button{background:var(--card);color:var(--muted);border:0;padding:7px 12px;font:600 12px var(--sans);cursor:pointer}
+.seg button.on{background:#1f2a22;color:var(--green-hi)}
+.field{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.field select,.field input{background:var(--card);color:var(--text);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font:500 12px var(--sans)}
+.field input[type=text]{width:180px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer}
+.chk input{accent-color:var(--gold)}
+.spacer{flex:1}
+
+/* ---------- SECTIONS ---------- */
+section{margin-top:26px}
+.sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.sec-h h2{font-family:var(--deco);font-weight:400;font-size:22px;letter-spacing:.08em;color:var(--gold);margin:0}
+.sec-h p{margin:0;color:var(--muted);font-size:13px}
+
+.consensus{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.cons{border:1px solid rgba(34,179,90,.35);background:linear-gradient(180deg,rgba(34,179,90,.10),rgba(34,179,90,.02) 60%),var(--card);border-radius:14px;padding:14px}
+.cons .t{font-weight:700;font-size:14px;line-height:1.3}
+.cons .side{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{font:700 11px var(--sans);letter-spacing:.05em;padding:4px 9px;border-radius:999px;background:#1f2a22;color:var(--green-hi);border:1px solid rgba(79,224,138,.35)}
+.pill.gold{background:#2a2312;color:var(--gold-hi);border-color:rgba(227,178,60,.45)}
+.pill.dim{background:#1a1d22;color:var(--muted);border-color:var(--line2)}
+.cons .who{margin-top:8px;font-size:12px;color:var(--muted)}
+.cons .who b{color:var(--text);font-weight:600}
+.cons .m{margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:14px}
+
+/* event cards */
+.events{display:grid;gap:12px}
+.ev{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ev-h{display:flex;gap:12px;align-items:center;padding:12px 14px;background:linear-gradient(90deg,rgba(227,178,60,.07),transparent 60%);border-bottom:1px solid var(--line)}
+.ev-h img{width:36px;height:36px;border-radius:8px;object-fit:cover;background:#1b1f24;flex:none}
+.ev-h .ti{flex:1;min-width:0}
+.ev-h .ti a{font-weight:700;font-size:15px;line-height:1.25;display:block}
+.ev-h .ti a:hover{color:var(--gold-hi)}
+.ev-h .meta{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.ev-h .tot{text-align:right;font-family:var(--mono);font-size:13px;white-space:nowrap}
+.ev-h .tot small{display:block;color:var(--muted);font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font:700 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:left;padding:8px 14px;border-bottom:1px solid var(--line)}
+td{padding:9px 14px;border-bottom:1px solid #1a1e23;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+td.mkt{color:var(--muted);max-width:320px}
+.trader{font-weight:700;color:var(--text)}
+.trader:hover{color:var(--gold-hi)}
+.trader .sp{font:600 10px var(--sans);color:var(--gold);margin-left:6px;letter-spacing:.06em}
+.out{display:inline-block;font-weight:700;padding:3px 8px;border-radius:6px;background:#1c2128;border:1px solid var(--line2)}
+.out.yes{color:var(--green-hi);border-color:rgba(79,224,138,.3)} .out.no{color:#ff9a9d;border-color:rgba(255,90,95,.3)}
+.pos{color:var(--green-hi)} .neg{color:var(--red)}
+.arrow{color:var(--dim);margin:0 4px}
+
+/* trader view */
+.traders{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.tc{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tc-h{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(34,179,90,.08),transparent 60%)}
+.tc-h .av{width:34px;height:34px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,var(--gold-hi),var(--gold-lo));display:grid;place-items:center;font:800 13px var(--sans);color:#1a1305}
+.tc-h .nm{flex:1;min-width:0}
+.tc-h .nm a{font-weight:800}
+.tc-h .nm small{display:block;color:var(--muted);font-size:11px}
+.tc-h .tot{font-family:var(--mono);text-align:right;font-size:13px}
+.tc ul{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}
+.tc li{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:9px 14px;border-bottom:1px solid #1a1e23;font-size:12.5px}
+.tc li .q{color:var(--text);line-height:1.3}
+.tc li .q a:hover{color:var(--gold-hi)}
+.tc li .r{font-family:var(--mono);text-align:right;white-space:nowrap}
+.tc li .s{color:var(--muted);font-size:11.5px}
+.tc .err{padding:12px 14px;color:var(--red);font-size:12px}
+.tc .none{padding:12px 14px;color:var(--dim);font-size:12px}
+
+/* roster */
+.roster{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;border:1px solid var(--line2);border-radius:999px;background:var(--card);font-size:12px}
+.chip .dot{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--gold-hi),var(--gold-lo))}
+.chip b{font-weight:700} .chip i{font-style:normal;color:var(--muted)}
+.chip.hot{border-color:rgba(227,178,60,.35)}
+.chip.ok .dot{background:radial-gradient(circle at 35% 30%,var(--green-hi),#0f6a31)}
+.chip.bad .dot{background:var(--red)}
+.chip.load .dot{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+.empty{border:1px dashed var(--line2);border-radius:14px;padding:44px 20px;text-align:center;color:var(--muted)}
+.empty .big{font-family:var(--deco);font-size:26px;color:var(--gold);letter-spacing:.08em;margin-bottom:6px}
+footer{margin:48px 0 30px;color:var(--dim);font-size:12px;text-align:center;line-height:1.7}
+footer a{color:var(--gold)}
+.hidden{display:none!important}
+
+@media (max-width:760px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .scan{font-size:24px;padding:16px 40px 16px 48px}
+  td.mkt{display:none} th.mkt{display:none}
+  .hide-sm{display:none}
+  td,th{padding:8px 10px}
+  .traders{grid-template-columns:1fr}
+  .field input[type=text]{width:130px}
+}
+
+/* ---------- v2: day sections + conviction ---------- */
+.day{margin-top:18px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0e1114,#0a0c0f);overflow:hidden}
+.day > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;user-select:none}
+.day > summary::-webkit-details-marker{display:none}
+.day > summary .lbl{font-family:var(--deco);font-size:22px;letter-spacing:.06em;color:var(--gold-hi)}
+.day > summary .dt{color:var(--muted);font-size:13px}
+.day > summary .sum{margin-left:auto;display:flex;gap:14px;font-family:var(--mono);font-size:12px;color:var(--muted);align-items:center}
+.day > summary .sum b{color:var(--text);font-weight:600}
+.day > summary .chev{transition:transform .2s;color:var(--gold);font-size:12px}
+.day[open] > summary .chev{transform:rotate(90deg)}
+.day.live > summary .lbl{color:#ff8a8d}
+.day.live{border-color:rgba(255,90,95,.35)}
+.day-body{padding:0 12px 12px;display:grid;gap:10px}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(255,90,95,.6);animation:ping 1.4s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 8px rgba(255,90,95,0)}100%{box-shadow:0 0 0 0 rgba(255,90,95,0)}}
+
+.ev .time{font-family:var(--mono);font-size:12px;color:var(--gold-hi);background:#1d1910;border:1px solid rgba(227,178,60,.3);border-radius:8px;padding:6px 8px;text-align:center;min-width:64px;flex:none;line-height:1.2}
+.ev .time small{display:block;color:var(--muted);font-size:10px}
+.ev .more{display:block;width:100%;background:none;border:0;border-top:1px solid var(--line);color:var(--gold);font:600 12px var(--sans);padding:9px;cursor:pointer}
+.ev .more:hover{background:#15181c}
+
+.conv{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.conv .bar{width:54px;height:6px;border-radius:6px;background:#1d2228;overflow:hidden}
+.conv .bar i{display:block;height:100%;border-radius:6px}
+.conv .pc{font-family:var(--mono);min-width:44px;text-align:right}
+.tier{font:800 9.5px var(--sans);letter-spacing:.1em;padding:3px 6px;border-radius:5px;text-transform:uppercase;white-space:nowrap}
+.tier.max{background:linear-gradient(180deg,#ffe08a,#e3b23c);color:#1a1305}
+.tier.high{background:#173a24;color:var(--green-hi);border:1px solid rgba(79,224,138,.4)}
+.tier.med{background:#1c2128;color:#c9c9c0;border:1px solid var(--line2)}
+.tier.low{background:transparent;color:var(--dim);border:1px solid var(--line)}
+.bar i.max{background:linear-gradient(90deg,var(--gold),var(--gold-hi))} .bar i.high{background:var(--green)} .bar i.med{background:#7d8590} .bar i.low{background:#3a4048}
+.hedge{font:700 9.5px var(--sans);letter-spacing:.08em;color:#c79bff;border:1px solid rgba(199,155,255,.35);border-radius:5px;padding:2px 5px;margin-left:6px}
+
+.plays{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.play{position:relative;border:1px solid rgba(227,178,60,.35);border-radius:14px;padding:14px;background:radial-gradient(400px 120px at 0% 0%,rgba(227,178,60,.14),transparent 70%),var(--card)}
+.play .top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.play .big{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--gold-hi);line-height:1}
+.play .big small{font-size:11px;color:var(--muted);font-family:var(--sans);margin-left:4px}
+.play .pick{margin-top:10px;font-weight:800;font-size:15px}
+.play .ttl{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+.play .ft{margin-top:10px;display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.play .ft b{color:var(--text)}
+.play .ft span:last-child{white-space:nowrap;margin-left:8px}
+.play .ft span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px}
+.shown{font-size:12px;color:var(--muted);margin-top:8px}
+.shown b{color:var(--text)}
+@media (max-width:760px){
+  .day > summary{flex-wrap:wrap}
+  .day > summary .sum{margin-left:0;width:100%}
+  .conv .bar{display:none}
+  .ev .time{min-width:54px}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <svg class="skyline" viewBox="0 0 1200 150" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3b23c" stop-opacity=".55"/><stop offset="1" stop-color="#e3b23c" stop-opacity="0"/></linearGradient></defs>
+    <path fill="url(#sk)" d="M0 150V112h40V96h22v16h18V70h26v42h20V88h14V60l12-14 12 14v28h18v24h30V84h24V50h8V30h10v20h8v62h26V92h30v20h22V76h18V40l18-24 18 24v72h24V98h28v14h20V64h34v48h18V86h26v26h22V52h10V36h14v16h10v60h30V90h20v22h26V72h22v40h24V58l16-18 16 18v54h20V94h30v18h22V80h28v32h18V66h12V48h16v64h26V96h24v16h30V74h26v38h20V88h22v24h34V60h24v52h18V100h30v12h26V82h20v30h40v38z"/>
+  </svg>
+  <div class="hero-inner wrap">
+    <svg class="coin" viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <radialGradient id="cg" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff2bf"/><stop offset=".45" stop-color="#f0c24b"/><stop offset=".85" stop-color="#b17a14"/><stop offset="1" stop-color="#6e4b0a"/></radialGradient>
+        <radialGradient id="lg" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#5fe596"/><stop offset=".6" stop-color="#1c9a45"/><stop offset="1" stop-color="#0d5c27"/></radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="url(#cg)"/>
+      <circle cx="50" cy="50" r="41" fill="none" stroke="#8a5f0e" stroke-width="1.5" opacity=".7"/>
+      <g fill="url(#lg)" stroke="#0b4a1f" stroke-width="1">
+        <ellipse cx="38" cy="38" rx="11" ry="11"/><ellipse cx="62" cy="38" rx="11" ry="11"/><ellipse cx="38" cy="62" rx="11" ry="11"/><ellipse cx="62" cy="62" rx="11" ry="11"/>
+      </g>
+      <path d="M50 50 Q58 72 66 82" stroke="#0d5c27" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="5" fill="#1c9a45"/>
+    </svg>
+    <h1>LUCK SOCIETY</h1>
+    <div class="tag">Sharp Money <b>Scanner</b> · Polymarket</div>
+    <div class="deco-rule"><span></span>☘<span></span></div>
+    <button class="scan" id="scanBtn">SCAN</button>
+    <div class="progress" id="prog"><i></i></div>
+    <div class="scan-sub" id="scanSub">Pulls every open bet from the top Polymarket sports &amp; esports traders.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="stats" id="stats">
+    <div class="stat"><div class="k">Traders tracked</div><div class="v gold" id="sTraders">—</div></div>
+    <div class="stat"><div class="k">Bets shown</div><div class="v" id="sBets">—</div></div>
+    <div class="stat"><div class="k">Money on the table</div><div class="v gold" id="sValue">—</div></div>
+    <div class="stat"><div class="k">Games today</div><div class="v" id="sToday">—</div></div>
+  </div>
+
+  <details class="day" id="rosterBox" style="margin-top:22px">
+    <summary><span class="lbl">The Roster</span><span class="dt" id="lastScan">Not scanned yet</span><span class="sum"><span id="rosterSum"></span><span class="chev">▶</span></span></summary>
+    <div class="day-body"><div class="roster" id="roster"></div></div>
+  </details>
+
+  <div class="controls" id="controls">
+    <div class="tabs" id="tabs"></div>
+    <div class="row2">
+      <div class="seg" id="viewSeg"><button data-v="day" class="on">By day</button><button data-v="trader">By trader</button></div>
+      <label class="field">Sort games
+        <select id="sort">
+          <option value="start">Start time</option>
+          <option value="conv">Top conviction</option>
+          <option value="value">Biggest money</option>
+          <option value="traders">Most sharps</option>
+        </select>
+      </label>
+      <label class="field">Conviction
+        <select id="minConv">
+          <option value="0">Any</option><option value="0.01" selected>1%+ of book</option><option value="0.025">2.5%+</option>
+          <option value="0.05">5%+</option><option value="0.1">10%+</option>
+        </select>
+      </label>
+      <label class="field">Min $
+        <select id="minVal">
+          <option value="0">Any</option><option value="100">100</option><option value="1000" selected>1K</option>
+          <option value="10000">10K</option><option value="50000">50K</option>
+        </select>
+      </label>
+      <label class="chk" title="Hide bets where the same trader holds both sides of a market — usually market-making, not a pick"><input type="checkbox" id="hideHedge" checked> Hide hedges</label>
+      <label class="chk"><input type="checkbox" id="showNon"> Non-sports</label>
+      <label class="chk" title="Also scan whoever is topping this month's Sports & Esports leaderboards"><input type="checkbox" id="hot" checked> + Hot hands</label>
+      <span class="spacer"></span>
+      <label class="field"><input type="text" id="q" placeholder="Search team, market, trader…"></label>
+    </div>
+    <div class="shown" id="shown"></div>
+  </div>
+
+  <section id="playsSec" class="hidden">
+    <div class="sec-h"><h2>Biggest Conviction Plays</h2><p>Upcoming games · largest share of each trader's open book</p></div>
+    <div class="plays" id="plays"></div>
+    <div class="legend">Conviction = bet value ÷ trader's total open book (accounts under $25K capped at Med).
+      <span class="tier max">🔥 Max</span> 10%+ <span class="tier high">High</span> 4–10% <span class="tier med">Med</span> 1–4% <span class="tier low">Low</span> &lt;1%</div>
+  </section>
+
+  <section id="consSec" class="hidden">
+    <div class="sec-h"><h2>Sharp Consensus</h2><p>Same side, 2+ tracked traders</p></div>
+    <div class="consensus" id="consensus"></div>
+  </section>
+
+  <section>
+    <div class="sec-h"><h2 id="listTitle">Open Bets</h2><p id="listSub"></p></div>
+    <div id="list"><div class="empty"><div class="big">Feeling lucky?</div>Hit <b>SCAN</b> to pull every open position live from Polymarket.</div></div>
+  </section>
+
+  <footer>
+    Live data from Polymarket's public data API · prices in ¢ = implied probability · "open book" = value of a trader's open positions (idle cash isn't public)<br>
+    Following other traders isn't a strategy on its own — big P&amp;L can come from market-making or one lucky hit. Bet responsibly. ☘
+  </footer>
+</main>
+
+<script>
+/* ============ CONFIG: the roster ============
+   spec = what they're known for (from leaderboard big wins). Add/remove traders freely. */
+const CORE = [
+  { name:"BreakTheBank",     wallet:"0xf0318c32136c2db7fec88b84869aee6a1106c80c", spec:"NFL · NBA" },
+  { name:"googleplay",       wallet:"0xe9b710551dd82a44e79203c2394a2b10163ace7b", spec:"NBA" },
+  { name:"mooseborzoii",     wallet:"0x1f3a646ce5cbe2c70270e7a46161d89b7c7b895d", spec:"NFL" },
+  { name:"joseph00677",      wallet:"0xcdcccd0f2d86e450d973da415ad2430e5cc7935a", spec:"Soccer" },
+  { name:"beachboy4",        wallet:"0xc2e7800b5af46e6093872b177b7a5e7f0563be51", spec:"Soccer" },
+  { name:"mintblade",        wallet:"0x96cfcb0c30942cfcd1cdf76c7d408794d66b1acb", spec:"Soccer" },
+  { name:"frostrizz",        wallet:"0xbc11a64ab34a03a043fbe80598fa065ee87eeec6", spec:"Soccer" },
+  { name:"sparklingwater123",wallet:"0x664ce9fb97ae1bbd538d7381b2f4e92dab16f49c", spec:"Soccer" },
+  { name:"DEEDDIT",          wallet:"0x09b428f7c2b469786286214aa5c90dd9015f7320", spec:"Soccer" },
+  { name:"fishalive",        wallet:"0xed64a7bf029040aa331abc87902434d815ef217d", spec:"Soccer" },
+  { name:"fengdubiying",     wallet:"0x17db3fcd93ba12d38382a0cade24b200185c5f6d", spec:"LoL" },
+  { name:"Mooseborzoiii",    wallet:"0x57a85952044f2c8e4d31b475aab6987d2f98ebc2", spec:"LoL" },
+  { name:"Diabolical-Prize", wallet:"0x7c37b52eb226bcb9411375ec48b0169663fb6aeb", spec:"LoL · CS" },
+  { name:"bossoskil1",       wallet:"0xa5ea13a81d2b7e8e424b182bdc1db08e756bd96a", spec:"Esports" },
+  { name:"swisstony",        wallet:"0x204f72f35326db932158cba6adff0b9a1da95e14", spec:"All sports" },
+  { name:"RN1",              wallet:"0x2005d16a84ceefa912d4e380cd32e7ff827875ea", spec:"All sports" },
+  { name:"kch123",           wallet:"0x6a72f61820b26b1fe4d956e17b6dc2a1ea3033ee", spec:"All sports" },
+  { name:"HomeRunHazard",    wallet:"0x5268527977f700f9bf9b6d5cd843859e4e70135d", spec:"MLB?" },
+];
+
+let TRADERS = [...CORE];
+const DATA = "https://data-api.polymarket.com";
+const GAMMA = "https://gamma-api.polymarket.com";
+const SPORTS = ["NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","LoL","Other sports","Non-sports"];
+const MIN_BOOK = 25000;            // accounts smaller than this can't rank as Max/High conviction
+const LIVE_WINDOW = 3.5*3600e3;   // a game counts as "live" for 3.5h after its start
+
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = v => { const a=Math.abs(v); const s = a>=1e6 ? (a/1e6).toFixed(2)+"M" : a>=1e3 ? (a/1e3).toFixed(a>=1e5?0:1)+"K" : a.toFixed(0); return (v<0?"-$":"$")+s; };
+const signed = v => (v>=0?"+":"")+money(v);
+const cents = p => (p*100).toFixed(p<0.1||p>0.9?1:0)+"¢";
+const pct = v => v>=0.1 ? (v*100).toFixed(0)+"%" : v>=0.01 ? (v*100).toFixed(1)+"%" : (v*100).toFixed(2)+"%";
+const shortName = n => (n && n.length>20 && /^0x[0-9a-f]/i.test(n)) ? n.slice(0,6)+"…"+n.split("-")[0].slice(-4) : n;
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const parseTime = s => { if(!s) return NaN; const t = Date.parse(String(s).replace(" ","T").replace(/\+00$/,"Z")); return t; };
+
+async function getJSON(url, tries=3){
+  for(let i=0;i<tries;i++){
+    try{ const r = await fetch(url); if(r.status===429){ await sleep(900*(i+1)); continue; } if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); }
+    catch(e){ if(i===tries-1) throw e; await sleep(500*(i+1)); }
+  }
+  throw new Error("rate limited");
+}
+async function pool(items, n, fn){
+  const out = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({length:Math.min(n,items.length)}, async () => { while(i<items.length){ const k=i++; out[k]=await fn(items[k],k);} }));
+  return out;
+}
+
+function classify(tags, slug){
+  const t = new Set(tags); const s = slug||"";
+  if (t.has("nfl") || s.startsWith("nfl-")) return "NFL";
+  if (t.has("nba") || s.startsWith("nba-")) return "NBA";
+  if (t.has("nhl") || s.startsWith("nhl-")) return "NHL";
+  if (t.has("mlb") || s.startsWith("mlb-")) return "MLB";
+  if (t.has("ufc") || t.has("mma") || s.startsWith("ufc-")) return "UFC";
+  if (t.has("league-of-legends") || t.has("lol") || s.startsWith("lol-")) return "LoL";
+  if (t.has("tennis") || s.startsWith("atp-") || s.startsWith("wta-")) return "Tennis";
+  if (t.has("soccer")) return "Soccer";
+  if (t.has("sports") || t.has("esports") || t.has("games")) return "Other sports";
+  return "Non-sports";
+}
+function tierOf(c){ return c>=0.10?"max":c>=0.04?"high":c>=0.01?"med":"low"; }
+const TIER_LABEL = {max:"🔥 Max", high:"High", med:"Med", low:"Low"};
+
+/* ============ state ============ */
+let STATE = { positions:[], status:{}, book:{}, scannedAt:null };
+let UI = { sport:"All", view:"day", sort:"start", minConv:0.01, min:1000, hideHedge:true, showNon:false, hot:true, q:"" };
+const OPEN = {};   // remembers which day sections / game cards are expanded
+
+/* ============ scan ============ */
+async function fetchPositions(t){
+  const all = [];
+  for(let off=0; off<5000; off+=500){
+    const page = await getJSON(`${DATA}/positions?user=${t.wallet}&sizeThreshold=1&limit=500&offset=${off}&sortBy=CURRENT&sortDirection=DESC`);
+    if(!Array.isArray(page) || !page.length) break;
+    all.push(...page);
+    if(page.length < 500) break;
+  }
+  return all;
+}
+async function fetchBook(t, positions){
+  try{ const v = await getJSON(`${DATA}/value?user=${t.wallet}`); const n = +(v?.[0]?.value); if(n>0) return n; }catch(e){}
+  return positions.reduce((a,p)=>a+(p.currentValue||0),0);
+}
+async function fetchEvents(slugs){
+  const map = {};
+  const chunks = []; for(let i=0;i<slugs.length;i+=40) chunks.push(slugs.slice(i,i+40));
+  await pool(chunks, 3, async chunk => {
+    const qs = chunk.map(s=>"slug="+encodeURIComponent(s)).join("&");
+    try{
+      const evs = await getJSON(`${GAMMA}/events?${qs}&limit=100`);
+      for(const e of evs){
+        const tags = (e.tags||[]).map(x=>x.slug);
+        const gs = (e.markets||[]).map(m=>m.gameStartTime).find(Boolean);
+        map[e.slug] = { sport: classify(tags, e.slug), game: gs ? parseTime(gs) : NaN, end: parseTime(e.endDate), title: e.title, image: e.icon || e.image };
+      }
+    }catch(e){}
+  });
+  return map;
+}
+
+async function scan(){
+  const btn = $("#scanBtn"), sub = $("#scanSub"), prog = $("#prog"), bar = prog.querySelector("i");
+  btn.disabled = true; btn.classList.add("busy"); btn.textContent = "SCANNING"; prog.classList.add("on"); bar.style.width = "3%";
+  TRADERS = [...CORE];
+  if(UI.hot){
+    sub.textContent = "Pulling this month's leaderboard…";
+    const known = new Set(CORE.map(t=>t.wallet.toLowerCase()));
+    for(const [cat,n,label] of [["SPORTS",25,"Hot · Sports"],["ESPORTS",10,"Hot · Esports"]]){
+      try{
+        const lb = await getJSON(`${DATA}/v1/leaderboard?category=${cat}&timePeriod=MONTH&orderBy=PNL&limit=${n}`);
+        for(const [i,x] of lb.entries()){ const w=(x.proxyWallet||"").toLowerCase(); if(!w||known.has(w)) continue; known.add(w);
+          TRADERS.push({ name:shortName(x.userName) || (w.slice(0,6)+"…"+w.slice(-4)), wallet:w, spec:`${label} #${x.rank||i+1} · ${signed(+x.pnl||0)}/mo`, hot:true }); }
+      }catch(e){}
+    }
+  }
+  STATE.status = {}; STATE.book = {}; TRADERS.forEach(t => STATE.status[t.name] = "load"); renderRoster();
+  let done = 0; const total = TRADERS.length + 2;
+  const results = await pool(TRADERS, 4, async t => {
+    try{
+      const raw = await fetchPositions(t);
+      const open = raw.filter(p => !p.redeemable && p.curPrice > 0.002 && p.curPrice < 0.998 && p.currentValue >= 1)
+                      .map(p => ({ ...p, trader:t.name, wallet:t.wallet, spec:t.spec }));
+      STATE.book[t.name] = Math.max(await fetchBook(t, raw), open.reduce((a,p)=>a+p.currentValue,0));
+      // hedge detection: same trader holds both outcomes of one market
+      const byCond = {}; open.forEach(p => (byCond[p.conditionId] ||= []).push(p));
+      Object.values(byCond).forEach(list => { if(new Set(list.map(p=>p.outcomeIndex)).size > 1) list.forEach(p => p.hedged = true); });
+      STATE.status[t.name] = { ok:true, n:open.length };
+      return open;
+    } catch(e){ STATE.status[t.name] = { ok:false, err:e.message }; return []; }
+    finally{ done++; bar.style.width = (done/total*100)+"%"; sub.textContent = `Scanned ${done}/${TRADERS.length} traders…`; renderRoster(); }
+  });
+  const positions = results.flat();
+  sub.textContent = "Matching bets to games…";
+  const events = await fetchEvents([...new Set(positions.map(p=>p.eventSlug).filter(Boolean))]);
+  for(const p of positions){
+    const ev = events[p.eventSlug];
+    p.sport = ev ? ev.sport : classify([], p.eventSlug);
+    p.game = ev ? ev.game : NaN;               // exact game start (games only)
+    p.isGame = !isNaN(p.game);
+    p.end = ev && !isNaN(ev.end) ? ev.end : parseTime(p.endDate);
+    p.eventTitle = ev?.title || p.title;
+    p.eventImage = ev?.image || p.icon;
+    const book = STATE.book[p.trader] || 0;
+    p.conv = book > 0 ? Math.min(1, p.currentValue / book) : 0;
+    p.smallBook = book < MIN_BOOK;
+    p.tier = p.smallBook ? (p.conv>=0.01 ? "med" : "low") : tierOf(p.conv);
+  }
+  STATE.positions = positions; STATE.scannedAt = new Date();
+  bar.style.width = "100%";
+  sub.textContent = `Found ${positions.length.toLocaleString()} open positions across ${TRADERS.length} traders.`;
+  btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "SCAN";
+  setTimeout(()=>prog.classList.remove("on"), 600);
+  render();
+}
+
+/* ============ filtering ============ */
+function filtered(ignoreSport=false){
+  const q = UI.q.trim().toLowerCase();
+  return STATE.positions.filter(p => {
+    if(!UI.showNon && p.sport==="Non-sports") return false;
+    if(!ignoreSport && UI.sport!=="All" && p.sport!==UI.sport) return false;
+    if(p.currentValue < UI.min) return false;
+    if(p.conv < UI.minConv) return false;
+    if(UI.hideHedge && p.hedged) return false;
+    if(q && !(`${p.title} ${p.eventTitle} ${p.trader} ${p.outcome}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+/* ============ day buckets ============ */
+function dayKey(ts){ const d=new Date(ts); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+function bucketOf(p){
+  const now = Date.now();
+  if(!p.isGame) return { key:"zz-futures", order:9e15, label:"Futures & Season-Long", sub:"Awards, titles, standings · no fixed game time" };
+  if(p.game <= now && now - p.game < LIVE_WINDOW) return { key:"00-live", order:-1, label:"Live Now", sub:"Started in the last few hours", live:true };
+  if(p.game < now) return { key:"01-earlier", order:0, label:"Awaiting Result", sub:"Game started a while ago, not settled yet" };
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(p.game); d.setHours(0,0,0,0);
+  const diff = Math.round((d - today)/864e5);
+  const dateTxt = new Date(p.game).toLocaleDateString([], {weekday:"long", month:"short", day:"numeric"});
+  if(diff===0) return { key:"10-"+dayKey(p.game), order:d.getTime(), label:"Today", sub:dateTxt };
+  if(diff===1) return { key:"11-"+dayKey(p.game), order:d.getTime(), label:"Tomorrow", sub:dateTxt };
+  if(diff<=7) return { key:"12-"+dayKey(p.game), order:d.getTime(), label:new Date(p.game).toLocaleDateString([], {weekday:"long"}), sub:new Date(p.game).toLocaleDateString([], {month:"short", day:"numeric"}) };
+  return { key:"50-later", order:8e15, label:"Later", sub:"More than a week out" };
+}
+const timeTxt = ts => new Date(ts).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+
+/* ============ render pieces ============ */
+function renderRoster(){
+  $("#roster").innerHTML = TRADERS.map(t => {
+    const s = STATE.status[t.name]; let cls="", info=esc(t.spec);
+    if(s==="load"){ cls="load"; info="scanning…"; }
+    else if(s && s.ok){ cls="ok"; const b=STATE.book[t.name]; info=`${esc(t.spec)} · ${s.n} open${b?` · book ${money(b)}`:""}`; }
+    else if(s && !s.ok){ cls="bad"; info="error"; }
+    return `<a class="chip ${cls} ${t.hot?"hot":""}" href="https://polymarket.com/profile/${t.wallet}" target="_blank" rel="noopener"><span class="dot"></span><b>${esc(t.name)}</b><i>${info}</i></a>`;
+  }).join("");
+  $("#sTraders").textContent = TRADERS.length;
+  const st = Object.values(STATE.status);
+  $("#rosterSum").innerHTML = st.length && st.every(s=>s!=="load")
+    ? `<span><b>${TRADERS.length}</b> traders</span><span><b>${st.filter(s=>s.ok&&s.n).length}</b> with open bets</span>`
+    : `<span><b>${TRADERS.length}</b> traders</span>`;
+}
+function renderTabs(){
+  const base = filtered(true);
+  const counts = {}; base.forEach(p => counts[p.sport]=(counts[p.sport]||0)+1);
+  const list = ["All", ...SPORTS.filter(s => s!=="Non-sports" || UI.showNon)];
+  $("#tabs").innerHTML = list.map(s => {
+    const n = s==="All" ? base.length : (counts[s]||0);
+    return `<button class="tab ${UI.sport===s?"on":""}" data-s="${s}">${s}<span class="n">${n}</span></button>`;
+  }).join("");
+}
+function renderStats(rows){
+  if(!STATE.scannedAt) return;
+  $("#sBets").textContent = rows.length.toLocaleString();
+  $("#sValue").textContent = money(rows.reduce((a,p)=>a+p.currentValue,0));
+  const today = dayKey(Date.now());
+  $("#sToday").textContent = new Set(rows.filter(p=>p.isGame && dayKey(p.game)===today).map(p=>p.eventSlug)).size;
+  $("#lastScan").textContent = "Last scan " + STATE.scannedAt.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  const total = STATE.positions.filter(p=>UI.showNon || p.sport!=="Non-sports").length;
+  $("#shown").innerHTML = `Showing <b>${rows.length.toLocaleString()}</b> of ${total.toLocaleString()} open positions · ${(total-rows.length).toLocaleString()} hidden by filters`;
+}
+function convCell(p){
+  return `<div class="conv" ${p.smallBook?`title="Small account (open book under ${money(MIN_BOOK)}) — % is less meaningful"`:""}><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span><span class="bar"><i class="${p.tier}" style="width:${Math.max(4,Math.min(100,p.conv/0.2*100))}%"></i></span><span class="pc">${pct(p.conv)}</span></div>`;
+}
+function outCls(o){ const s=(o||"").toLowerCase(); return s==="yes"?"yes":s==="no"?"no":""; }
+
+function renderPlays(rows){
+  const now = Date.now();
+  const best = {};   // one card per trader+market, highest conviction
+  rows.filter(p => p.isGame && p.game > now - LIVE_WINDOW && !p.hedged && !p.smallBook)
+      .forEach(p => { const k=p.trader+"|"+p.conditionId; if(!best[k] || best[k].conv < p.conv) best[k]=p; });
+  const plays = Object.values(best).sort((a,b)=>b.conv-a.conv).slice(0,8);
+  $("#playsSec").classList.toggle("hidden", !plays.length);
+  $("#plays").innerHTML = plays.map(p => `
+    <a class="play" href="https://polymarket.com/event/${esc(p.eventSlug)}" target="_blank" rel="noopener">
+      <div class="top"><div class="big">${pct(p.conv)}<small>of book</small></div><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span></div>
+      <div class="pick">${esc(p.outcome)} <span style="color:var(--muted);font-weight:600">@ ${cents(p.curPrice)}</span></div>
+      <div class="ttl">${esc(p.title)}</div>
+      <div class="ft"><span><b>${esc(p.trader)}</b> · ${money(p.currentValue)}</span><span>${p.game<=now?"🔴 Live":esc(new Date(p.game).toLocaleDateString([], {weekday:"short"}))+" "+timeTxt(p.game)}</span></div>
+    </a>`).join("");
+}
+function renderConsensus(rows){
+  const g = {};
+  rows.filter(p=>!p.hedged).forEach(p => { const k = p.conditionId+"|"+p.outcomeIndex; (g[k] ||= {p, list:[]}).list.push(p); });
+  const cons = Object.values(g).map(x => {
+    const tr = [...new Set(x.list.map(p=>p.trader))];
+    return {...x, traders: tr, value: x.list.reduce((a,p)=>a+p.currentValue,0), conv: x.list.reduce((a,p)=>a+p.conv,0)};
+  }).filter(x => x.traders.length >= 2).sort((a,b)=> b.traders.length-a.traders.length || b.conv-a.conv).slice(0,9);
+  $("#consSec").classList.toggle("hidden", !cons.length);
+  $("#consensus").innerHTML = cons.map(x => `
+    <a class="cons" href="https://polymarket.com/event/${esc(x.p.eventSlug)}" target="_blank" rel="noopener">
+      <div class="t">${esc(x.p.title)}</div>
+      <div class="side"><span class="pill">${esc(x.p.outcome)} @ ${cents(x.p.curPrice)}</span><span class="pill gold">${x.traders.length} sharps</span><span class="pill dim">${esc(x.p.sport)}</span></div>
+      <div class="who">${x.list.sort((a,b)=>b.conv-a.conv).map(p=>`<b>${esc(p.trader)}</b> ${pct(p.conv)}`).join(" · ")}</div>
+      <div class="m"><span>${money(x.value)} on it</span><span>${x.p.isGame ? (x.p.game<=Date.now()?"🔴 Live":new Date(x.p.game).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})+" "+timeTxt(x.p.game)) : "Future"}</span></div>
+    </a>`).join("");
+}
+
+function posRow(p){
+  return `<tr>
+    <td><a class="trader" href="https://polymarket.com/profile/${p.wallet}" target="_blank" rel="noopener">${esc(p.trader)}</a>${p.hedged?'<span class="hedge" title="Holds both sides of this market">HEDGE</span>':""}</td>
+    <td class="mkt">${esc(p.title)}</td>
+    <td><span class="out ${outCls(p.outcome)}">${esc(p.outcome)}</span></td>
+    <td class="num hide-sm">${cents(p.avgPrice)}<span class="arrow">→</span>${cents(p.curPrice)}</td>
+    <td class="num">${money(p.currentValue)}</td>
+    <td class="num">${convCell(p)}</td>
+  </tr>`;
+}
+function gameCard(x){
+  const id = "g:"+x.slug; const showAll = OPEN[id];
+  const list = x.list.sort((a,b)=>b.conv-a.conv);
+  const shown = showAll ? list : list.slice(0,4);
+  const now = Date.now();
+  const time = x.isGame ? (x.game<=now ? `<div class="time">🔴<small>LIVE</small></div>` : `<div class="time">${timeTxt(x.game)}<small>${esc(new Date(x.game).toLocaleDateString([], {weekday:"short"}))}</small></div>`)
+                        : (x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : "");
+  return `<div class="ev">
+    <div class="ev-h">${time}
+      <div class="ti"><a href="https://polymarket.com/event/${esc(x.slug)}" target="_blank" rel="noopener">${esc(x.title)}</a>
+        <div class="meta"><span class="pill dim">${esc(x.sport)}</span><span>${x.traders} trader${x.traders>1?"s":""}</span>${!x.isGame && x.end ? `<span>Resolves ${esc(new Date(x.end).toLocaleDateString([], {month:"short", year:"numeric"}))}</span>`:""}</div></div>
+      <div class="tot"><small>Top conviction</small><span class="tier ${tierOf(x.conv)}">${pct(x.conv)}</span><br><span style="color:var(--muted)">${money(x.value)}</span></div>
+    </div>
+    <table><thead><tr><th>Trader</th><th class="mkt">Market</th><th>Side</th><th class="num hide-sm">Entry → Now</th><th class="num">Value</th><th class="num">% of book</th></tr></thead>
+    <tbody>${shown.map(posRow).join("")}</tbody></table>
+    ${list.length>4 ? `<button class="more" data-toggle="${esc(id)}">${showAll?"Show less":`Show ${list.length-4} more`}</button>`:""}
+  </div>`;
+}
+function groupGames(rows){
+  const g = {};
+  rows.forEach(p => { const k=p.eventSlug||p.conditionId; (g[k] ||= {slug:p.eventSlug, title:p.eventTitle, img:p.eventImage, sport:p.sport, game:p.game, isGame:p.isGame, end:p.end, list:[]}).list.push(p); });
+  return Object.values(g).map(x => ({...x, value:x.list.reduce((a,p)=>a+p.currentValue,0), conv:Math.max(...x.list.map(p=>p.conv)), traders:new Set(x.list.map(p=>p.trader)).size}));
+}
+function sortGames(groups){
+  const by = {
+    start:(a,b)=>(isNaN(a.game)?(a.end||9e15):a.game)-(isNaN(b.game)?(b.end||9e15):b.game) || b.conv-a.conv,
+    conv:(a,b)=>b.conv-a.conv, value:(a,b)=>b.value-a.value, traders:(a,b)=>b.traders-a.traders || b.conv-a.conv,
+  };
+  return groups.sort(by[UI.sort]);
+}
+
+function renderByDay(rows){
+  const buckets = {};
+  rows.forEach(p => { const b = bucketOf(p); (buckets[b.key] ||= {...b, rows:[]}).rows.push(p); });
+  const list = Object.values(buckets).sort((a,b)=>a.key.localeCompare(b.key) || a.order-b.order);
+  $("#listSub").textContent = `${list.length} sections · ${rows.length} positions`;
+  return list.map((b,i) => {
+    const games = sortGames(groupGames(b.rows));
+    const isOpen = OPEN["d:"+b.key] ?? (b.key.startsWith("00") || b.key.startsWith("10") || b.key.startsWith("11"));
+    const val = b.rows.reduce((a,p)=>a+p.currentValue,0);
+    const maxN = b.rows.filter(p=>p.tier==="max").length;
+    return `<details class="day ${b.live?"live":""}" data-day="${esc(b.key)}" ${isOpen?"open":""}>
+      <summary>${b.live?'<span class="live-dot"></span>':""}<span class="lbl">${esc(b.label)}</span><span class="dt">${esc(b.sub)}</span>
+        <span class="sum"><span><b>${games.length}</b> ${b.key==="zz-futures"?"markets":"games"}</span><span><b>${money(val)}</b></span>${maxN?`<span class="tier max">🔥 ${maxN}</span>`:""}<span class="chev">▶</span></span></summary>
+      <div class="day-body">${isOpen ? games.slice(0,150).map(gameCard).join("") : ""}</div>
+    </details>`;
+  }).join("");
+}
+
+function renderByTrader(rows){
+  const g = {}; TRADERS.forEach(t => g[t.name] = {t, list:[]});
+  rows.forEach(p => g[p.trader]?.list.push(p));
+  const cards = Object.values(g).map(x => ({...x, value:x.list.reduce((a,p)=>a+p.currentValue,0)}))
+    .sort((a,b)=>b.list.length && a.list.length ? Math.max(...b.list.map(p=>p.conv))-Math.max(...a.list.map(p=>p.conv)) : b.list.length-a.list.length);
+  $("#listSub").textContent = `${rows.length} positions across ${cards.filter(c=>c.list.length).length} traders · sorted by conviction`;
+  const when = p => p.isGame ? (p.game<=Date.now()?"🔴 Live":new Date(p.game).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})+" "+timeTxt(p.game)) : "Future";
+  return `<div class="traders">` + cards.map(x => {
+    const st = STATE.status[x.t.name]; const book = STATE.book[x.t.name];
+    const body = st && !st.ok ? `<div class="err">Couldn't load: ${esc(st.err)}</div>`
+      : !x.list.length ? `<div class="none">No open bets matching these filters.</div>`
+      : `<ul>${x.list.sort((a,b)=>b.conv-a.conv).map(p => `<li>
+          <div class="q"><a href="https://polymarket.com/event/${esc(p.eventSlug)}" target="_blank" rel="noopener">${esc(p.title)}</a>${p.hedged?'<span class="hedge">HEDGE</span>':""}</div>
+          <div class="r"><span class="tier ${p.tier}">${pct(p.conv)}</span></div>
+          <div class="s"><span class="out ${outCls(p.outcome)}">${esc(p.outcome)}</span> ${cents(p.avgPrice)} → ${cents(p.curPrice)} · ${esc(p.sport)} · ${when(p)}</div>
+          <div class="r">${money(p.currentValue)}</div>
+        </li>`).join("")}</ul>`;
+    return `<div class="tc">
+      <div class="tc-h"><div class="av">${esc(x.t.name.slice(0,2).toUpperCase())}</div>
+        <div class="nm"><a href="https://polymarket.com/profile/${x.t.wallet}" target="_blank" rel="noopener">${esc(x.t.name)}</a><small>${esc(x.t.spec)} · ${x.list.length} shown</small></div>
+        <div class="tot"><small style="display:block;color:var(--muted);font-family:var(--sans);font-size:10px;letter-spacing:.1em">OPEN BOOK</small>${book?money(book):"—"}</div></div>
+      ${body}</div>`;
+  }).join("") + `</div>`;
+}
+
+function render(){
+  renderRoster(); renderTabs();
+  if(!STATE.scannedAt) return;
+  const rows = filtered();
+  renderStats(rows); renderPlays(rows); renderConsensus(rows);
+  $("#listTitle").textContent = (UI.sport==="All" ? "Open Bets" : UI.sport + " Bets");
+  $("#list").innerHTML = rows.length ? (UI.view==="day" ? renderByDay(rows) : renderByTrader(rows))
+    : `<div class="empty"><div class="big">No action here</div>No open bets match these filters — try a lower conviction or Min $, or another sport.</div>`;
+}
+
+/* ============ wiring ============ */
+$("#scanBtn").addEventListener("click", scan);
+$("#tabs").addEventListener("click", e => { const b=e.target.closest(".tab"); if(!b) return; UI.sport=b.dataset.s; render(); });
+$("#viewSeg").addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return; UI.view=b.dataset.v; [...$("#viewSeg").children].forEach(x=>x.classList.toggle("on",x===b)); render(); });
+$("#sort").addEventListener("change", e => { UI.sort=e.target.value; render(); });
+$("#minConv").addEventListener("change", e => { UI.minConv=+e.target.value; render(); });
+$("#minVal").addEventListener("change", e => { UI.min=+e.target.value; render(); });
+$("#hideHedge").addEventListener("change", e => { UI.hideHedge=e.target.checked; render(); });
+$("#showNon").addEventListener("change", e => { UI.showNon=e.target.checked; if(!UI.showNon && UI.sport==="Non-sports") UI.sport="All"; render(); });
+$("#hot").addEventListener("change", e => { UI.hot=e.target.checked; $("#scanSub").textContent = "Hit SCAN to apply."; });
+let qt; $("#q").addEventListener("input", e => { clearTimeout(qt); qt=setTimeout(()=>{ UI.q=e.target.value; render(); }, 150); });
+$("#list").addEventListener("click", e => {
+  const b = e.target.closest("[data-toggle]"); if(!b) return;
+  OPEN[b.dataset.toggle] = !OPEN[b.dataset.toggle]; render();
+});
+$("#list").addEventListener("toggle", e => {
+  const d = e.target.closest("details.day"); if(!d || e.target!==d) return;
+  const k = "d:"+d.dataset.day; if(OPEN[k] === d.open) return;
+  OPEN[k] = d.open; render();
+}, true);
+render();
+</script>
+</body>
+</html>
