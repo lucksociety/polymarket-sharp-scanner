@@ -1,7 +1,7 @@
 import {WorkflowEntrypoint} from 'cloudflare:workers';
 import E from '../engine.js';
 import {handle,report,editReply} from './discord.mjs';
-import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet} from './scanner.mjs';
+import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage} from './scanner.mjs';
 
 export default {fetch:handle};
 const opts={retries:{limit:2,delay:'10 seconds',backoff:'exponential'},timeout:'45 seconds'};
@@ -34,14 +34,15 @@ function historyGet(step,env,job){
  let requests=0,exhausted=false,failed=false;const conditions=new Set();
  const get=async url=>{
   const hash=await digest(job.trader.wallet+'|'+job.asOf+'|'+url),key='history-page/'+hash;
-  const cached=await step.do('cached-'+hash,()=>env.CACHE.get(key,{type:'json',cacheTtl:30}));
+  const slim=value=>job.kind==='wallet'&&new URL(url).pathname==='/v2/positions'&&value?compactWalletPage(value):value;
+  const cached=await step.do('cached-'+hash,async()=>slim(await env.CACHE.get(key,{type:'json',cacheTtl:30})));
   let value=cached;
   if(value===null){
    if(requests>=20){exhausted=true;throw Error('Continue history in next bounded job');}
    requests++;
    try{
-    await step.sleep('pace-'+hash,'2 seconds');
-    value=await step.do('public-'+hash,{...opts,retries:{limit:1,delay:'15 seconds',backoff:'exponential'}},()=>readPublic(url,new URL(url).hostname==='gamma-api.polymarket.com'?new Set(conditions):undefined));
+    await step.sleep('pace-'+hash,job.kind==='wallet'?'1 second':'2 seconds');
+    value=await step.do('public-'+hash,{...opts,retries:{limit:1,delay:'15 seconds',backoff:'exponential'}},async()=>slim(await readPublic(url,new URL(url).hostname==='gamma-api.polymarket.com'?new Set(conditions):undefined)));
     await step.do('cache-'+hash,()=>env.CACHE.put(key,JSON.stringify(value),{expirationTtl:86400}));
    }catch(e){failed=true;throw e;}
   }

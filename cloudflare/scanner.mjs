@@ -38,6 +38,10 @@ export async function roster(get,warnings){
  }
  return traders;
 }
+export function compactWalletPage(page){
+ if(!Array.isArray(page?.data))return page;
+ return {...page,data:page.data.filter(p=>!p.redeemable).map(p=>p.current_price>.002&&p.current_price<.998&&p.current_value>=1?p:pick(p,['token_id','current_size','entry_cost_usdc','redeemable','current_price','current_value','opposite_token_id']))};
+}
 export async function fetchWallet(t,get,asOf){
  const raw=await E.pages(async url=>{
   const page=await get(url);

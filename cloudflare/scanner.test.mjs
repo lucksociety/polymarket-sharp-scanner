@@ -31,3 +31,19 @@ test('large-wallet row compaction preserves hidden hedge shares and the full por
  for(const key of ['paired','netShares','costBook','conv','costKnown'])assert.equal(actual[key],expected[key],key);
  assert.equal(value.positions.length,1);
 });
+
+test('metadata requests omit irrelevant outcomes while preserving all scanned positions',async()=>{
+ let metadata;
+ const scan=await collect(async url=>{
+  const u=new URL(url);
+  if(u.pathname==='/v2/positions')return {data:[raw,{...raw,token_id:'tiny',condition_id:'0x'+'b'.repeat(64),event_slug:'unrelated-small-holding',current_size:10,current_value:5,entry_cost_usdc:5}],pagination:{next_cursor:null}};
+  if(u.pathname==='/events')metadata=u.searchParams.getAll('slug');
+  return get(url);
+ },traders,options);
+ assert.deepEqual(metadata,['nba-test']);assert.equal(scan.positions.length,4);assert.equal(scan.scannedWallets,2);assert.equal(scan.complete,true);
+});
+
+test('cached wallet pages discard redeemed rows and unused fields while preserving cursor and hedge economics',async()=>{
+ const {compactWalletPage}=await import('./scanner.mjs');const page={data:[raw,{...raw,token_id:'redeemed',redeemable:true},{...raw,token_id:'thin',current_price:.0001,current_value:.01,current_size:100,entry_cost_usdc:12}],pagination:{next_cursor:'opaque'}};
+ const slim=compactWalletPage(page);assert.equal(slim.data.length,2);assert.equal(slim.pagination.next_cursor,'opaque');assert.equal(slim.data[0].title,raw.title);assert.equal(slim.data[1].title,undefined);assert.equal(slim.data[1].current_size,100);assert.equal(slim.data[1].entry_cost_usdc,12);assert.equal(slim.data[1].opposite_token_id,raw.opposite_token_id);
+});

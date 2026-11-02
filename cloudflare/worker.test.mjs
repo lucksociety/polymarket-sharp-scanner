@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {compactWalletPage} from './scanner.mjs';
 const source=(await readFile(new URL('./worker.mjs',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default {fetch:handle};','').replace('export class PolysharpWorkflow','class PolysharpWorkflow');
 function harness(readPublic,fetchWallet=async()=>({positions:[],activity:[]})){
  const values=new Map(),created=[],sleeps=[];
  const env={CACHE:{get:async k=>values.has(k)?values.get(k):null,put:async(k,v)=>values.set(k,JSON.parse(v))},SCANS:{create:async x=>{created.push(x);return{};},createBatch:async x=>{created.push(...x);return[];}}};
  const step={do:async(_n,options,fn)=>(fn||options)(),sleep:async(n,d)=>{sleeps.push([n,d]);}};
- const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet',source+';return {historyGet,launchBatch,result,PolysharpWorkflow};')(class{},readPublic,fetchWallet);
+ const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet','compactWalletPage',source+';return {historyGet,launchBatch,result,PolysharpWorkflow};')(class{},readPublic,fetchWallet,compactWalletPage);
  return{...funcs,env,step,values,created,sleeps};
 }
 test('history resumes beyond one Free-plan request budget without publishing a truncated cohort',async()=>{
