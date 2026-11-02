@@ -69,7 +69,7 @@ export async function collect(get,traders,options,onWallet=async fn=>fn()){
  const chunks=[];for(let i=0;i<slugs.length;i+=20)chunks.push(slugs.slice(i,i+20));
  await pool(chunks,2,async chunk=>{try{const es=await get(`${GAMMA}/events?${chunk.map(s=>'slug='+encodeURIComponent(s)).join('&')}&limit=100`,new Set(positions.map(p=>p.conditionId)));for(const e of es)events.set(e.slug,e);}catch{warnings.push('Game metadata unavailable');}});
  for(const p of positions){const ev=events.get(p.eventSlug),m=ev?.markets?.find(m=>m.conditionId===p.conditionId);p.sport=ev?classify((ev.tags||[]).map(t=>t.slug),ev.slug):classify([],p.eventSlug);p.game=m?.gameStartTime?Date.parse(m.gameStartTime):NaN;p.isGame=Number.isFinite(p.game);}
- const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&p.conv>=options.settings.minCostShare&&(options.sport==='All'||p.sport===options.sport));
+ const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&p.conv>=options.settings.minCostShare&&(options.sport==='All'?p.sport!=='Non-sports':p.sport===options.sport));
  return {positions,activities,candidates,warnings,asOf,scannedWallets,complete:warnings.length===0};
 }
 export async function quote(p,get){
