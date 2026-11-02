@@ -163,6 +163,7 @@ footer a{color:var(--gold)}
 .hidden{display:none!important}
 
 @media (max-width:760px){
+  .controls{position:static}
   .stats{grid-template-columns:repeat(2,1fr)}
   .scan{font-size:24px;padding:16px 40px 16px 48px}
   td.mkt{display:none} th.mkt{display:none}
@@ -172,7 +173,7 @@ footer a{color:var(--gold)}
   .field input[type=text]{width:130px}
 }
 
-/* ---------- v2: day sections + conviction ---------- */
+/* ---------- v2: day sections + open cost share ---------- */
 .day{margin-top:18px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0e1114,#0a0c0f);overflow:hidden}
 .day > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;user-select:none}
 .day > summary::-webkit-details-marker{display:none}
@@ -277,14 +278,14 @@ footer a{color:var(--gold)}
       <label class="field">Sort games
         <select id="sort">
           <option value="start">Start time</option>
-          <option value="conv">Top conviction</option>
+          <option value="conv">Top open cost share</option>
           <option value="value">Biggest money</option>
           <option value="traders">Most sharps</option>
         </select>
       </label>
-      <label class="field">Conviction
+      <label class="field">Open cost share
         <select id="minConv">
-          <option value="0">Any</option><option value="0.01" selected>1%+ of book</option><option value="0.025">2.5%+</option>
+          <option value="0">Any</option><option value="0.01">1%+ of cost book</option><option value="0.025">2.5%+</option><option value="0.04" selected>4%+</option>
           <option value="0.05">5%+</option><option value="0.1">10%+</option>
         </select>
       </label>
@@ -294,7 +295,7 @@ footer a{color:var(--gold)}
           <option value="10000">10K</option><option value="50000">50K</option>
         </select>
       </label>
-      <label class="chk" title="Hide bets where the same trader holds both sides of a market — usually market-making, not a pick"><input type="checkbox" id="hideHedge" checked> Hide hedges</label>
+      <label class="chk" title="Hide fully paired positions; partial hedges retain only unmatched shares in open cost share"><input type="checkbox" id="hideHedge" checked> Hide fully paired</label>
       <label class="chk"><input type="checkbox" id="showNon"> Non-sports</label>
       <label class="chk" title="Also scan whoever is topping this month's Sports & Esports leaderboards"><input type="checkbox" id="hot" checked> + Hot hands</label>
       <span class="spacer"></span>
@@ -304,14 +305,14 @@ footer a{color:var(--gold)}
   </div>
 
   <section id="playsSec" class="hidden">
-    <div class="sec-h"><h2>Biggest Conviction Plays</h2><p>Upcoming games · largest share of each trader's open book</p></div>
+    <div class="sec-h"><h2>Largest Directional Positions</h2><p>Upcoming games · largest net share of each trader's open entry cost</p></div>
     <div class="plays" id="plays"></div>
-    <div class="legend">Conviction = bet value ÷ trader's total open book (accounts under $25K capped at Med).
+    <div class="legend">Open cost share = unmatched entry cost ÷ total open entry cost. Excludes idle cash and external hedges. Accounts under $25K of open cost capped at Med.
       <span class="tier max">🔥 Max</span> 10%+ <span class="tier high">High</span> 4–10% <span class="tier med">Med</span> 1–4% <span class="tier low">Low</span> &lt;1%</div>
   </section>
 
   <section id="consSec" class="hidden">
-    <div class="sec-h"><h2>Sharp Consensus</h2><p>Same side, 2+ tracked traders</p></div>
+    <div class="sec-h"><h2>Tracked Agreement</h2><p>Full roster support and opposition · not a probability estimate</p></div>
     <div class="consensus" id="consensus"></div>
   </section>
 
@@ -321,11 +322,12 @@ footer a{color:var(--gold)}
   </section>
 
   <footer>
-    Live data from Polymarket's public data API · prices in ¢ = implied probability · "open book" = value of a trader's open positions (idle cash isn't public)<br>
+    Live public API data · marks are not executable prices · open cost share excludes idle cash and external hedges<br>
     Following other traders isn't a strategy on its own — big P&amp;L can come from market-making or one lucky hit. Bet responsibly. ☘
   </footer>
 </main>
 
+<script src="engine.js"></script>
 <script>
 /* ============ CONFIG: the roster ============
    spec = what they're known for (from leaderboard big wins). Add/remove traders freely. */
@@ -354,7 +356,7 @@ let TRADERS = [...CORE];
 const DATA = "https://data-api.polymarket.com";
 const GAMMA = "https://gamma-api.polymarket.com";
 const SPORTS = ["NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","LoL","Other sports","Non-sports"];
-const MIN_BOOK = 25000;            // accounts smaller than this can't rank as Max/High conviction
+const MIN_BOOK = 25000;            // accounts smaller than this can't rank as Max/High open cost share
 const LIVE_WINDOW = 3.5*3600e3;   // a game counts as "live" for 3.5h after its start
 
 /* ============ helpers ============ */
@@ -370,7 +372,7 @@ const parseTime = s => { if(!s) return NaN; const t = Date.parse(String(s).repla
 
 async function getJSON(url, tries=3){
   for(let i=0;i<tries;i++){
-    try{ const r = await fetch(url); if(r.status===429){ await sleep(900*(i+1)); continue; } if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); }
+    try{ const r = await fetch(url,{signal:AbortSignal.timeout(20000)}); if((r.status===429||r.status===503)&&i<tries-1){ const delay=Number(r.headers.get("Retry-After")); await sleep(Number.isFinite(delay)&&delay>0?Math.min(delay*1000,30000):900*(i+1)); continue; } if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); }
     catch(e){ if(i===tries-1) throw e; await sleep(500*(i+1)); }
   }
   throw new Error("rate limited");
@@ -399,23 +401,21 @@ const TIER_LABEL = {max:"🔥 Max", high:"High", med:"Med", low:"Low"};
 
 /* ============ state ============ */
 let STATE = { positions:[], status:{}, book:{}, scannedAt:null };
-let UI = { sport:"All", view:"day", sort:"start", minConv:0.01, min:1000, hideHedge:true, showNon:false, hot:true, q:"" };
+let UI = { sport:"All", view:"day", sort:"start", minConv:0.04, min:1000, hideHedge:true, showNon:false, hot:true, q:"" };
 const OPEN = {};   // remembers which day sections / game cards are expanded
 
 /* ============ scan ============ */
 async function fetchPositions(t){
-  const all = [];
-  for(let off=0; off<5000; off+=500){
-    const page = await getJSON(`${DATA}/positions?user=${t.wallet}&sizeThreshold=1&limit=500&offset=${off}&sortBy=CURRENT&sortDirection=DESC`);
-    if(!Array.isArray(page) || !page.length) break;
-    all.push(...page);
-    if(page.length < 500) break;
-  }
-  return all;
+  const rows = await SharpEngine.pages(getJSON, `${DATA}/v2/positions?user=${t.wallet}&status=OPEN&limit=500&filter_type=TOKENS&filter_amount=0&sort_by=CURRENT_VALUE`);
+  return rows.map(SharpEngine.position);
 }
 async function fetchBook(t, positions){
-  try{ const v = await getJSON(`${DATA}/value?user=${t.wallet}`); const n = +(v?.[0]?.value); if(n>0) return n; }catch(e){}
+  try{ const v=await getJSON(`${DATA}/v2/value?user=${t.wallet}`); if(SharpEngine.number(v?.data?.value)) return +v.data.value; }catch(e){ STATE.warnings.push(`${t.name}: portfolio value unavailable; using holdings`); }
   return positions.reduce((a,p)=>a+(p.currentValue||0),0);
+}
+async function fetchActivity(t){
+  const start=Math.floor(Date.now()/1000)-86400;
+  return SharpEngine.pages(getJSON, `${DATA}/v2/activity?user=${t.wallet}&type=TRADE&start=${start}&sort_direction=DESC&limit=1000`,{maxPages:20});
 }
 async function fetchEvents(slugs){
   const map = {};
@@ -427,14 +427,16 @@ async function fetchEvents(slugs){
       for(const e of evs){
         const tags = (e.tags||[]).map(x=>x.slug);
         const gs = (e.markets||[]).map(m=>m.gameStartTime).find(Boolean);
-        map[e.slug] = { sport: classify(tags, e.slug), game: gs ? parseTime(gs) : NaN, end: parseTime(e.endDate), title: e.title, image: e.icon || e.image };
+        map[e.slug] = { markets:e.markets||[], sport: classify(tags, e.slug), game: gs ? parseTime(gs) : NaN, end: parseTime(e.endDate), title: e.title, image: e.icon || e.image };
       }
-    }catch(e){}
+    }catch(e){ STATE.warnings.push("Event metadata request failed: "+e.message); }
   });
   return map;
 }
 
 async function scan(){
+  STATE.warnings=[]; STATE.activity={}; STATE.complete=false;
+  try {
   const btn = $("#scanBtn"), sub = $("#scanSub"), prog = $("#prog"), bar = prog.querySelector("i");
   btn.disabled = true; btn.classList.add("busy"); btn.textContent = "SCANNING"; prog.classList.add("on"); bar.style.width = "3%";
   TRADERS = [...CORE];
@@ -443,26 +445,28 @@ async function scan(){
     const known = new Set(CORE.map(t=>t.wallet.toLowerCase()));
     for(const [cat,n,label] of [["SPORTS",25,"Hot · Sports"],["ESPORTS",10,"Hot · Esports"]]){
       try{
-        const lb = await getJSON(`${DATA}/v1/leaderboard?category=${cat}&timePeriod=MONTH&orderBy=PNL&limit=${n}`);
-        for(const [i,x] of lb.entries()){ const w=(x.proxyWallet||"").toLowerCase(); if(!w||known.has(w)) continue; known.add(w);
-          TRADERS.push({ name:shortName(x.userName) || (w.slice(0,6)+"…"+w.slice(-4)), wallet:w, spec:`${label} #${x.rank||i+1} · ${signed(+x.pnl||0)}/mo`, hot:true }); }
-      }catch(e){}
+        const lb = await getJSON(`${DATA}/v2/leaderboard?category=${cat.toLowerCase()}&time_period=month&sort_by=PNL&limit=${n}`);
+        for(const [i,x] of (lb.data||[]).entries()){ const w=(x.user_id||"").toLowerCase(); if(!w||known.has(w)) continue; known.add(w);
+          TRADERS.push({ name:shortName(x.user_name) || (w.slice(0,6)+"…"+w.slice(-4)), wallet:w, spec:`${label} #${x.rank||i+1} · ${signed(+x.pnl||0)}/mo`, hot:true }); }
+      }catch(e){ STATE.warnings.push("Monthly roster unavailable: "+e.message); }
     }
   }
+  const names=new Set();
+  TRADERS=TRADERS.map(t=>{let name=t.name;if(names.has(name))name+=' · '+t.wallet.slice(-6);names.add(name);return {...t,name};});
   STATE.status = {}; STATE.book = {}; TRADERS.forEach(t => STATE.status[t.name] = "load"); renderRoster();
   let done = 0; const total = TRADERS.length + 2;
   const results = await pool(TRADERS, 4, async t => {
     try{
       const raw = await fetchPositions(t);
-      const open = raw.filter(p => !p.redeemable && p.curPrice > 0.002 && p.curPrice < 0.998 && p.currentValue >= 1)
-                      .map(p => ({ ...p, trader:t.name, wallet:t.wallet, spec:t.spec }));
-      STATE.book[t.name] = Math.max(await fetchBook(t, raw), open.reduce((a,p)=>a+p.currentValue,0));
-      // hedge detection: same trader holds both outcomes of one market
-      const byCond = {}; open.forEach(p => (byCond[p.conditionId] ||= []).push(p));
-      Object.values(byCond).forEach(list => { if(new Set(list.map(p=>p.outcomeIndex)).size > 1) list.forEach(p => p.hedged = true); });
+      try { STATE.activity[t.wallet]=await fetchActivity(t); }
+      catch(e) { STATE.activity[t.wallet]=[]; STATE.warnings.push(`${t.name}: activity unavailable (${e.message})`); }
+      const annotated=SharpEngine.exposure(raw.filter(p=>!p.redeemable));
+      const open=annotated.filter(p=>!p.redeemable&&p.curPrice>0.002&&p.curPrice<0.998&&p.currentValue>=1)
+        .map(p=>({...p,trader:t.name,wallet:t.wallet,spec:t.spec,scanAt:Date.now()}));
+      STATE.book[t.name]=Math.max(await fetchBook(t,raw),open.reduce((a,p)=>a+p.currentValue,0));
       STATE.status[t.name] = { ok:true, n:open.length };
       return open;
-    } catch(e){ STATE.status[t.name] = { ok:false, err:e.message }; return []; }
+    } catch(e){ STATE.status[t.name] = { ok:false, err:e.message }; STATE.warnings.push(`${t.name}: positions unavailable (${e.message})`); return []; }
     finally{ done++; bar.style.width = (done/total*100)+"%"; sub.textContent = `Scanned ${done}/${TRADERS.length} traders…`; renderRoster(); }
   });
   const positions = results.flat();
@@ -471,22 +475,25 @@ async function scan(){
   for(const p of positions){
     const ev = events[p.eventSlug];
     p.sport = ev ? ev.sport : classify([], p.eventSlug);
-    p.game = ev ? ev.game : NaN;               // exact game start (games only)
+    const market=ev?.markets?.find(m=>m.conditionId===p.conditionId);
+    p.game = market?.gameStartTime ? parseTime(market.gameStartTime) : NaN;               // exact game start (games only)
     p.isGame = !isNaN(p.game);
     p.end = ev && !isNaN(ev.end) ? ev.end : parseTime(p.endDate);
     p.eventTitle = ev?.title || p.title;
     p.eventImage = ev?.image || p.icon;
     const book = STATE.book[p.trader] || 0;
-    p.conv = book > 0 ? Math.min(1, p.currentValue / book) : 0;
-    p.smallBook = book < MIN_BOOK;
+    p.smallBook = p.costBook < MIN_BOOK;
     p.tier = p.smallBook ? (p.conv>=0.01 ? "med" : "low") : tierOf(p.conv);
   }
   STATE.positions = positions; STATE.scannedAt = new Date();
+  STATE.complete=Object.values(STATE.status).every(s=>s.ok)&&STATE.warnings.length===0;
   bar.style.width = "100%";
   sub.textContent = `Found ${positions.length.toLocaleString()} open positions across ${TRADERS.length} traders.`;
   btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "SCAN";
   setTimeout(()=>prog.classList.remove("on"), 600);
   render();
+  } catch(e) { STATE.warnings.push(e.message); document.querySelector('#scanSub').textContent='Scan failed: '+e.message; }
+  finally { const btn=document.querySelector('#scanBtn'); btn.disabled=false;btn.classList.remove('busy');btn.textContent='SCAN'; if(typeof EdgeUI!=='undefined')EdgeUI.afterScan(); }
 }
 
 /* ============ filtering ============ */
@@ -497,7 +504,7 @@ function filtered(ignoreSport=false){
     if(!ignoreSport && UI.sport!=="All" && p.sport!==UI.sport) return false;
     if(p.currentValue < UI.min) return false;
     if(p.conv < UI.minConv) return false;
-    if(UI.hideHedge && p.hedged) return false;
+    if(UI.hideHedge && !(p.netShares>0)) return false;
     if(q && !(`${p.title} ${p.eventTitle} ${p.trader} ${p.outcome}`.toLowerCase().includes(q))) return false;
     return true;
   });
@@ -556,45 +563,43 @@ function renderStats(rows){
   $("#shown").innerHTML = `Showing <b>${rows.length.toLocaleString()}</b> of ${total.toLocaleString()} open positions · ${(total-rows.length).toLocaleString()} hidden by filters`;
 }
 function convCell(p){
-  return `<div class="conv" ${p.smallBook?`title="Small account (open book under ${money(MIN_BOOK)}) — % is less meaningful"`:""}><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span><span class="bar"><i class="${p.tier}" style="width:${Math.max(4,Math.min(100,p.conv/0.2*100))}%"></i></span><span class="pc">${pct(p.conv)}</span></div>`;
+  return `<div class="conv" ${p.smallBook?`title="Small account (open entry cost under ${money(MIN_BOOK)}) — % is less meaningful"`:""}><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span><span class="bar"><i class="${p.tier}" style="width:${Math.max(4,Math.min(100,p.conv/0.2*100))}%"></i></span><span class="pc">${pct(p.conv)}</span></div>`;
 }
 function outCls(o){ const s=(o||"").toLowerCase(); return s==="yes"?"yes":s==="no"?"no":""; }
 
 function renderPlays(rows){
   const now = Date.now();
-  const best = {};   // one card per trader+market, highest conviction
-  rows.filter(p => p.isGame && p.game > now - LIVE_WINDOW && !p.hedged && !p.smallBook)
+  const best = {};   // one card per trader+market, highest open cost share
+  rows.filter(p => p.isGame && p.game > now && p.netShares>0 && !p.smallBook)
       .forEach(p => { const k=p.trader+"|"+p.conditionId; if(!best[k] || best[k].conv < p.conv) best[k]=p; });
   const plays = Object.values(best).sort((a,b)=>b.conv-a.conv).slice(0,8);
   $("#playsSec").classList.toggle("hidden", !plays.length);
   $("#plays").innerHTML = plays.map(p => `
     <a class="play" href="https://polymarket.com/event/${esc(p.eventSlug)}" target="_blank" rel="noopener">
-      <div class="top"><div class="big">${pct(p.conv)}<small>of book</small></div><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span></div>
+      <div class="top"><div class="big">${pct(p.conv)}<small>of open cost</small></div><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span></div>
       <div class="pick">${esc(p.outcome)} <span style="color:var(--muted);font-weight:600">@ ${cents(p.curPrice)}</span></div>
       <div class="ttl">${esc(p.title)}</div>
       <div class="ft"><span><b>${esc(p.trader)}</b> · ${money(p.currentValue)}</span><span>${p.game<=now?"🔴 Live":esc(new Date(p.game).toLocaleDateString([], {weekday:"short"}))+" "+timeTxt(p.game)}</span></div>
     </a>`).join("");
 }
 function renderConsensus(rows){
-  const g = {};
-  rows.filter(p=>!p.hedged).forEach(p => { const k = p.conditionId+"|"+p.outcomeIndex; (g[k] ||= {p, list:[]}).list.push(p); });
-  const cons = Object.values(g).map(x => {
-    const tr = [...new Set(x.list.map(p=>p.trader))];
-    return {...x, traders: tr, value: x.list.reduce((a,p)=>a+p.currentValue,0), conv: x.list.reduce((a,p)=>a+p.conv,0)};
-  }).filter(x => x.traders.length >= 2).sort((a,b)=> b.traders.length-a.traders.length || b.conv-a.conv).slice(0,9);
-  $("#consSec").classList.toggle("hidden", !cons.length);
-  $("#consensus").innerHTML = cons.map(x => `
-    <a class="cons" href="https://polymarket.com/event/${esc(x.p.eventSlug)}" target="_blank" rel="noopener">
-      <div class="t">${esc(x.p.title)}</div>
-      <div class="side"><span class="pill">${esc(x.p.outcome)} @ ${cents(x.p.curPrice)}</span><span class="pill gold">${x.traders.length} sharps</span><span class="pill dim">${esc(x.p.sport)}</span></div>
-      <div class="who">${x.list.sort((a,b)=>b.conv-a.conv).map(p=>`<b>${esc(p.trader)}</b> ${pct(p.conv)}`).join(" · ")}</div>
-      <div class="m"><span>${money(x.value)} on it</span><span>${x.p.isGame ? (x.p.game<=Date.now()?"🔴 Live":new Date(x.p.game).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})+" "+timeTxt(x.p.game)) : "Future"}</span></div>
-    </a>`).join("");
+  const g={};
+  STATE.positions.filter(p=>p.netShares>0&&p.outcomeIndex!==999).forEach(p=>{const k=SharpEngine.key(p);(g[k]||={p,list:[]}).list.push(p);});
+  const visible=new Set(rows.map(SharpEngine.key));
+  const cons=Object.values(g).filter(x=>visible.has(SharpEngine.key(x.p))&&new Set(x.list.map(p=>p.wallet)).size>=2)
+    .sort((a,b)=>b.list.length-a.list.length).slice(0,9);
+  document.querySelector('#consSec').classList.toggle('hidden',!cons.length);
+  document.querySelector('#consensus').innerHTML=cons.map(x=>{
+    const opp=STATE.positions.filter(p=>p.conditionId===x.p.conditionId&&p.outcomeIndex!==x.p.outcomeIndex&&p.netShares>0);
+    return `<a class="cons" href="https://polymarket.com/event/${encodeURIComponent(x.p.eventSlug)}" target="_blank" rel="noopener"><div class="t">${esc(x.p.title)}</div>
+      <div class="side"><span class="pill">${esc(x.p.outcome)} · mark ${cents(x.p.curPrice)}</span><span class="pill gold">${new Set(x.list.map(p=>p.wallet)).size} supporters</span><span class="pill dim">${new Set(opp.map(p=>p.wallet)).size} opponents</span></div>
+      <div class="who">Support: ${x.list.map(p=>esc(p.trader)).join(' · ')}<br>Opposition: ${opp.length?opp.map(p=>esc(p.trader)).join(' · '):'None observed'}</div></a>`;
+  }).join('');
 }
 
 function posRow(p){
   return `<tr>
-    <td><a class="trader" href="https://polymarket.com/profile/${p.wallet}" target="_blank" rel="noopener">${esc(p.trader)}</a>${p.hedged?'<span class="hedge" title="Holds both sides of this market">HEDGE</span>':""}</td>
+    <td><a class="trader" href="https://polymarket.com/profile/${p.wallet}" target="_blank" rel="noopener">${esc(p.trader)}</a>${p.hedged?'<span class="hedge" title="Open cost share uses unmatched shares only">PARTIAL HEDGE</span>':""}</td>
     <td class="mkt">${esc(p.title)}</td>
     <td><span class="out ${outCls(p.outcome)}">${esc(p.outcome)}</span></td>
     <td class="num hide-sm">${cents(p.avgPrice)}<span class="arrow">→</span>${cents(p.curPrice)}</td>
@@ -603,7 +608,7 @@ function posRow(p){
   </tr>`;
 }
 function gameCard(x){
-  const id = "g:"+x.slug; const showAll = OPEN[id];
+  const id = "g:"+x.slug+"|"+(x.isGame?x.game:"future"); const showAll = OPEN[id];
   const list = x.list.sort((a,b)=>b.conv-a.conv);
   const shown = showAll ? list : list.slice(0,4);
   const now = Date.now();
@@ -613,16 +618,16 @@ function gameCard(x){
     <div class="ev-h">${time}
       <div class="ti"><a href="https://polymarket.com/event/${esc(x.slug)}" target="_blank" rel="noopener">${esc(x.title)}</a>
         <div class="meta"><span class="pill dim">${esc(x.sport)}</span><span>${x.traders} trader${x.traders>1?"s":""}</span>${!x.isGame && x.end ? `<span>Resolves ${esc(new Date(x.end).toLocaleDateString([], {month:"short", year:"numeric"}))}</span>`:""}</div></div>
-      <div class="tot"><small>Top conviction</small><span class="tier ${tierOf(x.conv)}">${pct(x.conv)}</span><br><span style="color:var(--muted)">${money(x.value)}</span></div>
+      <div class="tot"><small>Top open cost share</small><span class="tier ${x.list.find(p=>p.conv===x.conv)?.tier||"low"}">${pct(x.conv)}</span><br><span style="color:var(--muted)">${money(x.value)}</span></div>
     </div>
-    <table><thead><tr><th>Trader</th><th class="mkt">Market</th><th>Side</th><th class="num hide-sm">Entry → Now</th><th class="num">Value</th><th class="num">% of book</th></tr></thead>
+    <table><thead><tr><th>Trader</th><th class="mkt">Market</th><th>Side</th><th class="num hide-sm">Entry → Mark</th><th class="num">Value</th><th class="num">% of book</th></tr></thead>
     <tbody>${shown.map(posRow).join("")}</tbody></table>
     ${list.length>4 ? `<button class="more" data-toggle="${esc(id)}">${showAll?"Show less":`Show ${list.length-4} more`}</button>`:""}
   </div>`;
 }
 function groupGames(rows){
   const g = {};
-  rows.forEach(p => { const k=p.eventSlug||p.conditionId; (g[k] ||= {slug:p.eventSlug, title:p.eventTitle, img:p.eventImage, sport:p.sport, game:p.game, isGame:p.isGame, end:p.end, list:[]}).list.push(p); });
+  rows.forEach(p => { const k=(p.eventSlug||p.conditionId)+"|"+(p.isGame?p.game:"future"); (g[k] ||= {slug:p.eventSlug, title:p.eventTitle, img:p.eventImage, sport:p.sport, game:p.game, isGame:p.isGame, end:p.end, list:[]}).list.push(p); });
   return Object.values(g).map(x => ({...x, value:x.list.reduce((a,p)=>a+p.currentValue,0), conv:Math.max(...x.list.map(p=>p.conv)), traders:new Set(x.list.map(p=>p.trader)).size}));
 }
 function sortGames(groups){
@@ -656,7 +661,7 @@ function renderByTrader(rows){
   rows.forEach(p => g[p.trader]?.list.push(p));
   const cards = Object.values(g).map(x => ({...x, value:x.list.reduce((a,p)=>a+p.currentValue,0)}))
     .sort((a,b)=>b.list.length && a.list.length ? Math.max(...b.list.map(p=>p.conv))-Math.max(...a.list.map(p=>p.conv)) : b.list.length-a.list.length);
-  $("#listSub").textContent = `${rows.length} positions across ${cards.filter(c=>c.list.length).length} traders · sorted by conviction`;
+  $("#listSub").textContent = `${rows.length} positions across ${cards.filter(c=>c.list.length).length} traders · sorted by open cost share`;
   const when = p => p.isGame ? (p.game<=Date.now()?"🔴 Live":new Date(p.game).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})+" "+timeTxt(p.game)) : "Future";
   return `<div class="traders">` + cards.map(x => {
     const st = STATE.status[x.t.name]; const book = STATE.book[x.t.name];
@@ -681,9 +686,10 @@ function render(){
   if(!STATE.scannedAt) return;
   const rows = filtered();
   renderStats(rows); renderPlays(rows); renderConsensus(rows);
+  if(typeof EdgeUI!=="undefined")EdgeUI.render();
   $("#listTitle").textContent = (UI.sport==="All" ? "Open Bets" : UI.sport + " Bets");
   $("#list").innerHTML = rows.length ? (UI.view==="day" ? renderByDay(rows) : renderByTrader(rows))
-    : `<div class="empty"><div class="big">No action here</div>No open bets match these filters — try a lower conviction or Min $, or another sport.</div>`;
+    : `<div class="empty"><div class="big">No action here</div>No open bets match these filters — try a lower open cost share or Min $, or another sport.</div>`;
 }
 
 /* ============ wiring ============ */
@@ -708,5 +714,8 @@ $("#list").addEventListener("toggle", e => {
 }, true);
 render();
 </script>
+<script src="history.js"></script>
+<script src="edge.js"></script>
 </body>
 </html>
+
