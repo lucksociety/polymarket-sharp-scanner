@@ -30,3 +30,8 @@ Limitations: no independent sportsbook feed is bundled; default probability esti
 - The second live recovery reached 4,495 loaded positions and 43/44 wallets. It exposed a remaining large-wallet page ceiling and unnecessary metadata fanout, both addressed by the final version. Final live verification completed successfully.
 - Final live `/polysharp` invocation completed with all 44 wallets, 5,240 loaded positions and 37 upcoming candidates. The Workflow reported `complete: true`, no error, and a successful `send-result` step. Zero picks qualified under the configured evidence and execution gates. This verifies loading and public Discord delivery, not investment performance.
 - The final deployment also compacts cached wallet pages before persisting Workflow step outputs, preserving non-redeemed holdings, hedge shares, portfolio cost inputs and pagination cursors while reducing large-wallet storage and replay overhead.
+
+## Dashboard conviction command
+
+- `/polysharp` now defaults to the dashboard’s highest-conviction upcoming cards, with a shared `SharpEngine.topConviction` selector, $25,000 minimum open book, positive net exposure, one card per bettor/market and the same $1,000 / 4% display floors. Historical edge qualification no longer hides default conviction cards. Explicit `min_edge` or `min_win` arguments retain the optional stricter edge path.
+- 60 automated tests pass, including ranking/deduplication, small-book and hedge exclusion, no-history conviction output, explicit edge opt-in, partial-scan labels and mention suppression. Cards identify concentration and indicative prices without labeling either as verified edge or win probability.

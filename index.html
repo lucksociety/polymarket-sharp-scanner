@@ -564,10 +564,7 @@ function outCls(o){ const s=(o||"").toLowerCase(); return s==="yes"?"yes":s==="n
 
 function renderPlays(rows){
   const now = Date.now();
-  const best = {};   // one card per trader+market, highest open cost share
-  rows.filter(p => p.isGame && p.game > now && p.netShares>0 && !p.smallBook)
-      .forEach(p => { const k=p.trader+"|"+p.conditionId; if(!best[k] || best[k].conv < p.conv) best[k]=p; });
-  const plays = Object.values(best).sort((a,b)=>b.conv-a.conv).slice(0,8);
+  const plays = SharpEngine.topConviction(rows,{now,limit:8,minBook:MIN_BOOK});
   $("#playsSec").classList.toggle("hidden", !plays.length);
   $("#plays").innerHTML = plays.map(p => `
     <a class="play" href="https://polymarket.com/event/${esc(p.eventSlug)}" target="_blank" rel="noopener">

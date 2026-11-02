@@ -50,6 +50,21 @@ export function report({bets=[],warnings=[],positionCount=0,rosterCount=0,scanne
  while(size()>5800&&embeds.length>1)embeds.pop();
  return {content:'',embeds,allowed_mentions:{parse:[]}};
 }
+export function convictionReport({plays=[],positions=[],warnings=[],positionCount=positions.length,rosterCount=0,scannedWallets=0,complete=true,options,asOf=Date.now()}){
+ const summary=complete?'Highest-conviction upcoming bets from the dashboard.':'Partial scan — highest conviction among loaded wallets; missing wallets may change the ranking.';
+ const embeds=[{title:'☘ Luck Society · Highest Conviction',color:0xd4b259,description:summary+`\n${positionCount.toLocaleString()} positions loaded · ${scannedWallets}/${rosterCount} wallets scanned\nSport: ${safe(options.sport)} · Minimum $1,000 position / 4% open cost share · $25,000 minimum book`,fields:[{name:'Ranking',value:'Net directional entry cost ÷ the bettor’s total open entry cost, highest first. One bet per bettor and market, matching the dashboard’s top cards. Conviction measures concentration; it is not a verified edge or win probability.'}],timestamp:new Date(asOf).toISOString()}];
+ if(!plays.length)embeds[0].fields.push({name:'No matching upcoming bets',value:'No loaded positions match the dashboard’s conviction filters.'});
+ for(const [i,p]of plays.entries()){
+  const supporters=new Set(positions.filter(x=>x.conditionId===p.conditionId&&x.outcomeIndex===p.outcomeIndex&&x.netShares>0).map(x=>x.wallet));
+  const opponents=new Set(positions.filter(x=>x.conditionId===p.conditionId&&x.outcomeIndex!==p.outcomeIndex&&x.netShares>0).map(x=>x.wallet));
+  const tier=p.conv>=.1?'MAX':p.conv>=.04?'HIGH':p.conv>=.01?'MEDIUM':'LOW';
+  embeds.push({title:`${i+1}. ${safe(p.title)}`.slice(0,240),url:'https://polymarket.com/event/'+encodeURIComponent(p.eventSlug),color:0x24844b,description:`**${safe(p.outcome)}** · ${safe(p.sport)}\n**${percent(p.conv)} of open cost · ${tier} conviction**\nBettor: **${safe(p.trader)}**\nNet entry cost: **$${p.remainingCost.toLocaleString('en-US',{maximumFractionDigits:0})}** · Open book: $${p.costBook.toLocaleString('en-US',{maximumFractionDigits:0})}\nPosition market value: $${p.currentValue.toLocaleString('en-US',{maximumFractionDigits:0})}\nMarket price snapshot: **${(p.curPrice*100).toFixed(1)}¢**\nSupporting / opposing wallets: **${supporters.size} / ${opponents.size}**\nStarts <t:${Math.floor(p.game/1000)}:f>`,footer:{text:'Price is an indicative snapshot, not a guaranteed fill.'}});
+ }
+ if(warnings.length)embeds[0].fields.push({name:'Data notes',value:warnings.slice(0,3).map(safe).join('\n').slice(0,700)});
+ const size=()=>JSON.stringify(embeds).length;
+ while(size()>5600&&embeds.length>1)embeds.pop();
+ return {content:'',embeds,allowed_mentions:{parse:[]}};
+}
 export async function editReply(job,payload,fetcher=fetch){
  const url=`https://discord.com/api/v10/webhooks/${job.applicationId}/${encodeURIComponent(job.token)}/messages/@original`;
  const r=await fetcher(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});

@@ -38,6 +38,15 @@
         costKnown,conv:costBook>0&&remainingCost!==null?remainingCost/costBook:0};
     });
   }
+  function topConviction(rows,{now=Date.now(),limit=8,minBook=25000}={}) {
+    const best=new Map();
+    for(const p of rows){
+      if(!p.isGame||!Number.isFinite(p.game)||p.game<=now||!(p.netShares>0)||p.costKnown===false||!(p.costBook>=minBook)||!Number.isFinite(p.conv))continue;
+      const k=(p.wallet||p.trader)+'|'+p.conditionId;
+      if(!best.has(k)||best.get(k).conv<p.conv)best.set(k,p);
+    }
+    return [...best.values()].sort((a,b)=>b.conv-a.conv).slice(0,limit);
+  }
   function recentFlow(p,activity,now,minutes=120) {
     const from=now-minutes*60000;
     const rows=activity.filter(a=>a.token_id===p.asset&&a.type==='TRADE'&&a.timestamp*1000>=from&&a.timestamp*1000<=now);
@@ -191,7 +200,7 @@
     if(ex.known&&(!number(ex.spread)||ex.spread>settings.maxSpread))reasons.push('Spread too wide or bid missing');
     return {p,b,q,flow,ex,cons,edge,roi,reasons,eligible:reasons.length===0};
   }
-  const api={number,median,key,position,pages,exposure,recentFlow,validateEvidence,quality,benchmark,modelBenchmark,feeParams,execution,consensus,assess};
+  const api={number,median,key,position,pages,exposure,topConviction,recentFlow,validateEvidence,quality,benchmark,modelBenchmark,feeParams,execution,consensus,assess};
   root.SharpEngine=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis==='undefined'?this:globalThis);

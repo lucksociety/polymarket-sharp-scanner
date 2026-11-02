@@ -73,3 +73,9 @@ test('large-wallet cost validation scales linearly and preserves unknown-cost re
  const value=E.exposure(rows);
  assert.equal(value.length,1000);assert.ok(value.every(p=>p.costKnown===false));assert.ok(reads<20000,'portfolio cost validation must not repeat for every position');
 });
+
+test('dashboard top conviction ranks concentration independently of edge and retains different bettors on the same outcome',()=>{
+ const now=Date.now(),base={isGame:true,game:now+60000,netShares:100,costKnown:true,costBook:100000,conditionId:'m',wallet:'a',trader:'A',conv:.2};
+ const rows=[base,{...base,conv:.1,outcomeIndex:1},{...base,wallet:'b',conv:.3},{...base,wallet:'small',costBook:24000,conv:.9},{...base,wallet:'past',game:now-1,conv:.99},{...base,wallet:'hedge',netShares:0,conv:.99},{...base,wallet:'unknown',costKnown:false,conv:.99}];
+ const top=E.topConviction(rows,{now,limit:5});assert.deepEqual(top.map(p=>p.wallet),['b','a']);assert.deepEqual(top.map(p=>p.conv),[.3,.2]);
+});

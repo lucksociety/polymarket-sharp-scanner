@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {compactWalletPage} from './scanner.mjs';
+import {compactWalletPage,pool,validateOptions} from './scanner.mjs';
+import E from '../engine.js';
+import {convictionReport} from './discord.mjs';
 const source=(await readFile(new URL('./worker.mjs',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default {fetch:handle};','').replace('export class PolysharpWorkflow','class PolysharpWorkflow');
-function harness(readPublic,fetchWallet=async()=>({positions:[],activity:[]})){
+function harness(readPublic,fetchWallet=async()=>({positions:[],activity:[]}),deps={}){
  const values=new Map(),created=[],sleeps=[];
- const env={CACHE:{get:async k=>values.has(k)?values.get(k):null,put:async(k,v)=>values.set(k,JSON.parse(v))},SCANS:{create:async x=>{created.push(x);return{};},createBatch:async x=>{created.push(...x);return[];}}};
+ const env={CACHE:{get:async k=>values.has(k)?values.get(k):null,put:async(k,v)=>values.set(k,JSON.parse(v))},SCANS:{create:async x=>{created.push(x);return{};},createBatch:async x=>{created.push(...x);for(const j of x)if(j.params?.kind==='wallet')values.set('result/'+j.id,{ok:true,value:{positions:[],activity:[]}});return[];}}};
  const step={do:async(_n,options,fn)=>(fn||options)(),sleep:async(n,d)=>{sleeps.push([n,d]);}};
- const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet','compactWalletPage',source+';return {historyGet,launchBatch,result,PolysharpWorkflow};')(class{},readPublic,fetchWallet,compactWalletPage);
+ const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet','compactWalletPage','deps','const {E,roster,collect,pool,convictionReport,editReply}=deps;'+source+';return {historyGet,launchBatch,result,PolysharpWorkflow};')(class{},readPublic,fetchWallet,compactWalletPage,deps);
  return{...funcs,env,step,values,created,sleeps};
 }
 test('history resumes beyond one Free-plan request budget without publishing a truncated cohort',async()=>{
@@ -40,4 +42,12 @@ test('large wallets continue across jobs and publish only the completed result',
  const next=h.created[0];await w.run({instanceId:next.id,payload:next.params},h.step);
  assert.deepEqual(h.values.get('result/original'),{ok:true,value:{positions:[{asset:'one'}],activity:[]}});
  assert.equal(requests,25);
+});
+
+test('default Workflow publishes dashboard conviction cards with no historical or quote gates',async()=>{
+ const now=Date.now(),p={wallet:'a',trader:'A',conditionId:'market',outcomeIndex:0,outcome:'Yes',title:'Test game',eventSlug:'test',sport:'NBA',isGame:true,game:now+3600000,netShares:10000,costKnown:true,costBook:100000,conv:.25,remainingCost:25000,currentValue:10000,curPrice:.5};
+ const rows=[p,{...p,wallet:'b',trader:'B',conv:.3,remainingCost:30000}],sent=[];
+ const h=harness(async()=>{throw Error('Default should not need historical/quote calls');},undefined,{E,pool,convictionReport,roster:async()=>rows.map(p=>({wallet:p.wallet,name:p.trader})),collect:async()=>({positions:rows,candidates:rows,scannedWallets:2,complete:true,warnings:[]}),editReply:async(_job,payload)=>{sent.push(payload);return{delivered:true};}});
+ const w=new h.PolysharpWorkflow();w.env=h.env;const result=await w.run({instanceId:'test-scan',payload:{receivedAt:now,options:validateOptions([])}},h.step);
+ assert.equal(result.mode,'conviction');assert.equal(result.published,2);assert.deepEqual(result.top.map(p=>p.wallet),['b','a']);assert.ok(h.created.every(j=>j.params.kind==='wallet'));assert.match(sent.at(-1).embeds[1].description,/30.0%/);
 });

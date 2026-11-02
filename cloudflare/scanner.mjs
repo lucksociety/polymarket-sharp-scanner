@@ -6,10 +6,10 @@ export const DATA='https://data-api.polymarket.com',GAMMA='https://gamma-api.pol
 export const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,benchmarkMode:'polymarket',minCostShare:.04,minValue:1000};
 export async function pool(items,n,fn){const result=new Array(items.length);let next=0;await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(next<items.length){const i=next++;result[i]=await fn(items[i],i);}}));return result;}
 export function validateOptions(options=[]){
- const out={sport:'All',limit:3,settings:{...DEFAULTS}},seen=new Set();
+ const out={sport:'All',limit:3,ranking:'conviction',settings:{...DEFAULTS}},seen=new Set();
  const rules={sport:[3,v=>SPORTS.includes(v)],limit:[4,v=>Number.isInteger(v)&&v>=1&&v<=5],budget:[10,v=>Number.isFinite(v)&&v>=1&&v<=10000],min_edge:[10,v=>Number.isFinite(v)&&v>=0&&v<=20],min_win:[10,v=>Number.isFinite(v)&&v>=0&&v<=99]};
  if(!Array.isArray(options))throw Error('Invalid command options');
- for(const o of options){if(!rules[o.name]||seen.has(o.name))throw Error('Unknown or repeated option');seen.add(o.name);const [type,valid]=rules[o.name];if(o.type!==type||!valid(o.value))throw Error('Invalid '+o.name);if(o.name==='sport'||o.name==='limit')out[o.name]=o.value;else out.settings[{budget:'budget',min_edge:'minEdge',min_win:'minWin'}[o.name]]=o.name==='budget'?o.value:o.value/100;}
+ for(const o of options){if(!rules[o.name]||seen.has(o.name))throw Error('Unknown or repeated option');seen.add(o.name);if(o.name==='min_edge'||o.name==='min_win')out.ranking='edge';const [type,valid]=rules[o.name];if(o.type!==type||!valid(o.value))throw Error('Invalid '+o.name);if(o.name==='sport'||o.name==='limit')out[o.name]=o.value;else out.settings[{budget:'budget',min_edge:'minEdge',min_win:'minWin'}[o.name]]=o.name==='budget'?o.value:o.value/100;}
  return out;
 }
 const pick=(x,keys)=>Object.fromEntries(keys.filter(k=>Object.hasOwn(x,k)).map(k=>[k,x[k]]));

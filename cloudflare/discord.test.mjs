@@ -24,3 +24,11 @@ test('Discord aggregate embed length stays below 6000 with long malicious market
 test('ranking never promotes rejected candidates or counts same outcome twice',()=>{const a=bet(),b={...a,roi:.3},bad={...bet(2),eligible:false,roi:10};assert.equal(rankUnique([a,b,bad]).length,1);assert.equal(rankUnique([a,b,bad])[0].roi,.3);});
 test('command registration upserts only polysharp and preserves other application commands',async()=>{let request;const result=await register('SYNTHETIC',async(url,options)=>{request={url,...options};return Response.json({id:'123',name:'polysharp',application_id:APPLICATION_ID});});assert.equal(request.method,'POST');assert.equal(JSON.parse(request.body).name,'polysharp');assert.equal(result.name,'polysharp');assert.equal(command.contexts[0],0);});
 test('interaction replies edit the deferred message, never post an unrelated channel message',async()=>{let url;await editReply({applicationId:APPLICATION_ID,token:'SYNTHETIC'},report({options}),async(u,o)=>{url=u;assert.equal(o.method,'PATCH');return new Response(null,{status:204});});assert.match(url,/webhooks\/.*\/messages\/@original$/);});
+
+test('default slash command uses dashboard conviction and explicit edge options remain opt-in',()=>{
+ assert.equal(validateOptions([]).ranking,'conviction');assert.equal(validateOptions([{name:'sport',type:3,value:'NBA'}]).ranking,'conviction');assert.equal(validateOptions([{name:'min_edge',type:10,value:2}]).ranking,'edge');
+});
+test('conviction reports show observed bets without requiring modeled qualification and label partial scans',async()=>{
+ const {convictionReport}=await import('./discord.mjs');const p={...bet().p,wallet:'w',conv:.25,costBook:100000,remainingCost:25000,currentValue:30000,curPrice:.6,netShares:50000};
+ const r=convictionReport({plays:[p],positions:[p],options,rosterCount:2,scannedWallets:1,complete:false});assert.equal(r.embeds.length,2);assert.match(r.embeds[0].description,/Partial scan/);assert.match(r.embeds[1].description,/25.0%/);assert.match(r.embeds[1].description,/MAX conviction/);assert.match(r.embeds[1].description,/60.0¢/);assert.match(r.embeds[0].fields[0].value,/not a verified edge/);assert.deepEqual(r.allowed_mentions,{parse:[]});
+});

@@ -1,6 +1,6 @@
 import {WorkflowEntrypoint} from 'cloudflare:workers';
 import E from '../engine.js';
-import {handle,report,editReply} from './discord.mjs';
+import {handle,report,convictionReport,editReply} from './discord.mjs';
 import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage} from './scanner.mjs';
 
 export default {fetch:handle};
@@ -110,8 +110,8 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
   try{
    const traders=await roster(get,warnings);
    await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} sharp wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
-   const {evidence,missing}=await loadEvidence(step,this.env,traders,job.receivedAt);
-   const historyPending=await warmHistory(step,this.env,missing,job.receivedAt);
+   const {evidence,missing}=job.options.ranking==='edge'?await loadEvidence(step,this.env,traders,job.receivedAt):{evidence:{history:[]},missing:[]};
+   const historyPending=job.options.ranking==='edge'?await warmHistory(step,this.env,missing,job.receivedAt):0;
    const walletJobs=traders.map((t,i)=>({id:'wallet-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',trader:t,asOf:job.receivedAt,delay:1000+i*2500}}));
    await launchBatch(step,this.env,'launch-wallets',walletJobs);
    const walletData=new Map(),retry=[];
@@ -121,6 +121,12 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    await pool(retry,3,async t=>{try{walletData.set(t.wallet,await result(step,this.env,'retry-'+event.instanceId+'-'+t.wallet,deadline));}catch{}});
    const scan=await collect(get,traders,{...job.options,asOf:job.receivedAt},(_fn,t)=>{if(!walletData.has(t.wallet))throw Error('Wallet unavailable after retry');return walletData.get(t.wallet);});
    if(warnings.length)scan.complete=false;warnings.push(...scan.warnings);
+   if(job.options.ranking!=='edge'){
+    const plays=E.topConviction(scan.candidates,{now:Date.now(),limit:job.options.limit});
+    const payload=convictionReport({plays,positions:scan.positions,positionCount:scan.positions.length,rosterCount:traders.length,scannedWallets:scan.scannedWallets,complete:scan.complete,warnings,options:job.options,asOf:job.receivedAt});
+    await step.do('send-conviction-result',opts,()=>editReply(job,payload));
+    return {mode:'conviction',published:plays.length,complete:scan.complete,positions:scan.positions.length,wallets:scan.scannedWallets,roster:traders.length,top:plays.map(p=>({wallet:p.wallet,conditionId:p.conditionId,conv:p.conv,outcome:p.outcome}))};
+   }
    if(missing.length>historyPending)warnings.push(`${missing.length-historyPending} wallet histories are unavailable or exceeded the background budget.`);
    if(evidence.history.length===0)warnings.push('Trader history has not warmed yet. No wallet can qualify without sufficient prior observations.');
    const assessments=[];
