@@ -1,8 +1,8 @@
 /* Polymarket-only observational history. This is a hypothetical hold model,
    never an assertion about a wallet's actual account P&L or copier fills. */
 const PolymarketHistory={
-  async build({traders,get,pool,data,gamma,feeRate=.05,maxPages=100,classifySport=classify,onProgress=()=>{}}){
-    const now=Date.now(),start=Math.floor(now/1000)-180*86400,end=Math.floor(now/1000);
+  async build({traders,get,pool,data,gamma,feeRate=.05,maxPages=100,asOf=Date.now(),classifySport=classify,onProgress=()=>{}}){
+    const now=asOf,start=Math.floor(now/1000)-180*86400,end=Math.floor(now/1000);
     const warnings=[],counts={traders:0,activity:0,candidates:0,records:0,missingClose:0,failedWallets:0};
     const cohorts=await pool(traders,2,async t=>{
       try{

@@ -67,3 +67,9 @@ test('forward replay uses frozen evidence and reproduces settlement P&L without 
  const changed=structuredClone(row);changed.detectedAt=now+31000;
  assert.equal(replay({version:1,entries:[changed]}).rows[0].eligible,false);
 });
+
+test('large-wallet cost validation scales linearly and preserves unknown-cost rejection',()=>{
+ let reads=0;const rows=Array.from({length:1000},(_,i)=>({asset:String(i),oppositeAsset:'none',size:10,get entryCost(){reads++;return i===999?null:5;}}));
+ const value=E.exposure(rows);
+ assert.equal(value.length,1000);assert.ok(value.every(p=>p.costKnown===false));assert.ok(reads<20000,'portfolio cost validation must not repeat for every position');
+});

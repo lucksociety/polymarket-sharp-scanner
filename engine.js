@@ -28,13 +28,14 @@
   function exposure(rows) {
     const byAsset=new Map(rows.map(p=>[p.asset,p]));
     const costBook=rows.reduce((s,p)=>s+(number(p.entryCost)?+p.entryCost:0),0);
+    const costKnown=rows.every(x=>number(x.entryCost)&&+x.entryCost>=0);
     return rows.map(p=>{
       const other=byAsset.get(p.oppositeAsset);
       const paired=other?Math.min(+p.size,+other.size):0;
       const netShares=Math.max(0,+p.size-paired);
       const remainingCost=number(p.entryCost)&&p.size>0 ? +p.entryCost*netShares/p.size : null;
       return {...p,paired,hedged:paired>0,netShares,remainingCost,costBook,
-        costKnown:rows.every(x=>number(x.entryCost)&&+x.entryCost>=0),conv:costBook>0&&remainingCost!==null?remainingCost/costBook:0};
+        costKnown,conv:costBook>0&&remainingCost!==null?remainingCost/costBook:0};
     });
   }
   function recentFlow(p,activity,now,minutes=120) {

@@ -102,3 +102,7 @@ node replay.js exported-journal.json
 ```
 
 The existing visual style, roster editing in `index.html` and GitHub Pages deployment are retained. Runtime files: `index.html`, `engine.js`, `history.js`, `edge.js`, `dashboard.css` and `assets/luck-society-reference.png`. The supplied Luck Society reference artwork provides the actual clover coin and city header, displayed through cropped SVG viewports without the social-profile footer. The dashboard uses an emerald, black and gold palette, responsive controls, native disclosures for advanced settings/methodology, visible keyboard focus and reduced-motion support. There are no third-party JavaScript dependencies. See `VALIDATION.md` for checks performed on this change.
+
+## Discord /polysharp
+
+The Cloudflare-backed command is installed in Luck Society. `/polysharp` runs a fresh scan and posts qualifying model candidates in the invoking channel. Optional arguments: `sport`, `limit` (1–5), `budget`, `min_edge` (cents/share) and `min_win` (percentage). It reports missing history or incomplete scans instead of promoting fallback picks. See [the Cloudflare command documentation](cloudflare/README.md) for deployment, cache coverage, limits and tests. The production command runs independently of GitHub Pages and does not require a bot token during normal operation.
