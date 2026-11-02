@@ -35,8 +35,8 @@ const EdgeUI=(()=>{
     .edge-scroll{overflow:auto}.edge-status{font-size:13px;line-height:1.6;white-space:pre-line;color:var(--muted)}
   </style>`);
   document.querySelector('#playsSec').insertAdjacentHTML('beforebegin',`<section class="edge-panel" id="edgePanel">
-    <h2>Price & Evidence Screener</h2>
-    <p>The Polymarket-only model uses resolved pregame buys, historical prices, and executable quotes. A shortlist requires sport-specific historical performance, fresh net buying and qualified support. Modeled edge is not an independent sportsbook valuation. Estimates are uncertain. Open cost share excludes cash and external hedges; wallet independence is unknown unless you provide related-wallet groups.</p>
+    <div class="panel-heading"><div><span class="eyebrow">02 / THE EDGE ENGINE</span><h2>Find your next play.</h2></div><span class="model-badge">HISTORICAL MODEL</span></div>
+    <p class="panel-intro">A sharper shortlist starts with the price. Compare executable costs, recent buying, and the evidence behind each position.</p><details class="method-note"><summary>About these estimates</summary><p>The Polymarket-only model uses resolved pregame buys, historical prices, and executable quotes. A shortlist requires sport-specific historical performance, fresh net buying and qualified support. Modeled edge is not an independent sportsbook valuation. Estimates are uncertain. Open cost share excludes cash and external hedges; wallet independence is unknown unless you provide related-wallet groups.</p></details>
     <div class="edge-controls" id="edgeSettings">
       <label>Probability source<select id="edge-benchmarkMode"><option value="polymarket">Polymarket historical model</option><option value="independent">Independent odds (optional import)</option></select></label>
       <label>Order budget ($)<input id="edge-budget" type="number" min="1" max="1000000" step="1" value="100"></label>
@@ -50,9 +50,9 @@ const EdgeUI=(()=>{
       <label>Max spread (¢)<input id="edge-maxSpread" type="number" min="0" max="50" step=".5" value="3"></label>
       <label>Show<select id="edge-mode"><option value="all">All candidates + exclusion reasons</option><option value="eligible">Qualified shortlist only</option></select></label>
     </div>
-    <div class="edge-controls"><label>Historical assumed fee rate (%)<input id="history-fee" type="number" min="0" max="25" step=".5" value="5"></label><label>Max pages / wallet (1,000 trades each)<input id="history-pages" type="number" min="1" max="1000" step="1" value="100" required></label><button class="edge-button" id="history-build">Build Polymarket history (180 days)</button><button class="edge-button" id="history-stop" disabled>Stop history build</button></div><p>History models the first observed pregame buy per wallet/market in the last 180 days, held through official resolution with a fixed $100 entry and the assumed fee rate × p × (1−p). Both-side buyers are excluded. These are hypothetical returns at trader prices, not actual account profits or delayed copy fills. Current-roster selection creates survivor bias. Closing prices require a strictly pregame observation within 15 minutes; missing historical coverage is reported.</p><div class="edge-actions"><button class="edge-button" id="edge-quotes">Refresh quotes (first 60 candidates)</button><button class="edge-button" id="edge-export">Export evidence</button><button class="edge-button" id="edge-template">Download input template</button></div>
+    <div class="edge-controls"><label>Historical assumed fee rate (%)<input id="history-fee" type="number" min="0" max="25" step=".5" value="5"></label><label>Max pages / wallet (1,000 trades each)<input id="history-pages" type="number" min="1" max="1000" step="1" value="100" required></label><button class="edge-button" id="history-build">Build Polymarket history (180 days)</button><button class="edge-button" id="history-stop" disabled>Stop history build</button></div><details class="method-note"><summary>History methodology & limitations</summary><p>History models the first observed pregame buy per wallet/market in the last 180 days, held through official resolution with a fixed $100 entry and the assumed fee rate × p × (1−p). Both-side buyers are excluded. These are hypothetical returns at trader prices, not actual account profits or delayed copy fills. Current-roster selection creates survivor bias. Closing prices require a strictly pregame observation within 15 minutes; missing historical coverage is reported.</p></details><div class="edge-actions"><button class="edge-button" id="edge-quotes">Refresh quotes (first 60 candidates)</button><button class="edge-button" id="edge-export">Export evidence</button><button class="edge-button" id="edge-template">Download input template</button></div>
     <p class="edge-status" id="edgeStatus" role="status" aria-live="polite"></p>
-    <details><summary>Independent odds & trader evidence</summary>
+    <details class="evidence-tools"><summary>Import evidence & connect a feed</summary>
       <p>Import a version 1 JSON file. Odds need at least two distinct books, snapshots no older than 15 minutes, every mutually exclusive outcome, decimal odds, and confirmation that the line, overtime, draw and settlement rules match this exact condition. Source labels and wallet groups are your assertions, not independently audited. History needs all results including losses, after-cost P&L and closing probabilities; one row per wallet/game/entry. Qualification requires the minimum games, 90+ days, positive cost-weighted CLV and profit remaining after removing the biggest winning game.</p>
       <div class="edge-actions"><label class="edge-button">Import JSON<input id="edge-file" type="file" accept="application/json,.json"></label></div>
       <textarea id="edge-json" aria-label="Evidence JSON" placeholder="Paste evidence JSON here"></textarea>
@@ -62,10 +62,17 @@ const EdgeUI=(()=>{
     </details>
     <p class="edge-warning" id="edgeWarnings"></p><p id="edgeCount"></p><div class="edge-grid" id="edgeCards"></div>
   </section>
-  <section class="edge-panel"><h2>Forward Paper Journal</h2>
-    <p>Paper entries freeze the detection time, roster, settings, evidence and available quote. No orders are placed. Unqualified entries remain marked as research. One outcome per market per scan can be logged; repeat scans are separate experiments, not independent bets. Multiple bets on the same game may be correlated. Quotes expire after 30 seconds and the scan after 5 minutes.</p>
+  <section class="edge-panel" id="paperJournal"><div class="panel-heading"><div><span class="eyebrow">03 / TEST YOUR READ</span><h2>The paper trail.</h2></div><span class="model-badge">PAPER TRADING</span></div>
+    <details class="method-note"><summary>How paper tracking works</summary><p>Paper entries freeze the detection time, roster, settings, evidence and available quote. No orders are placed. Unqualified entries remain marked as research. One outcome per market per scan can be logged; repeat scans are separate experiments, not independent bets. Multiple bets on the same game may be correlated. Quotes expire after 30 seconds and the scan after 5 minutes.</p></details>
     <div class="edge-actions"><button class="edge-button" id="paper-export">Export journal & snapshots</button><button class="edge-button" id="paper-settle">Check official resolutions</button></div><p id="paperStats"></p><div class="edge-scroll" id="paperRows"></div>
   </section>`);
+  const settingsBox=document.querySelector('#edgeSettings');
+  const advanced=document.createElement('details');advanced.className='advanced-settings';advanced.innerHTML='<summary>Fine-tune your screen <span>Probability source, history, freshness & risk</span></summary><div class="advanced-grid"></div>';
+  for(const key of ['benchmarkMode','buffer','maxOpposition','minGames','freshMinutes','maxSpread'])advanced.querySelector('.advanced-grid').append(document.querySelector('#edge-'+key).closest('label'));
+  settingsBox.append(advanced);
+  const viewLabel=document.querySelector('#edge-mode').closest('label');viewLabel.classList.add('view-choice');
+  document.querySelector('#edge-quotes').classList.add('primary-action');
+  document.querySelector('#history-build').classList.add('history-action');
   document.querySelector('#edge-url').value=sourceURL;
   document.querySelectorAll('#edgeSettings input[type=number],#history-fee').forEach(el=>el.required=true);
   function candidates(){
@@ -85,6 +92,7 @@ const EdgeUI=(()=>{
   }
   function render(){
     assessments=candidates();
+    document.querySelector('#edgePanel .model-badge').textContent=settings.benchmarkMode==='polymarket'?'HISTORICAL MODEL':'INDEPENDENT ODDS';
     const qualified=assessments.filter(a=>a.eligible),mode=document.querySelector('#edge-mode').value;
     const displayed=(mode==='eligible'?qualified:assessments).slice(0,60);
     document.querySelector('#edgeStatus').textContent=message+`\nEvidence: ${evidence.odds.length} book snapshots · ${evidence.history.length} historical entries. ${storageError}`;

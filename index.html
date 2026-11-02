@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23d9a627'/%3E%3Cg fill='%231c8f3f'%3E%3Ccircle cx='24' cy='24' r='9'/%3E%3Ccircle cx='40' cy='24' r='9'/%3E%3Ccircle cx='24' cy='40' r='9'/%3E%3Ccircle cx='40' cy='40' r='9'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Limelight&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#07080a; --bg2:#0d0f12; --card:#111418; --card2:#161a1f; --line:#232830; --line2:#2e343d;
@@ -227,38 +227,33 @@ footer a{color:var(--gold)}
   .ev .time{min-width:54px}
 }
 </style>
+<link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
 
-<header class="hero">
-  <svg class="skyline" viewBox="0 0 1200 150" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3b23c" stop-opacity=".55"/><stop offset="1" stop-color="#e3b23c" stop-opacity="0"/></linearGradient></defs>
-    <path fill="url(#sk)" d="M0 150V112h40V96h22v16h18V70h26v42h20V88h14V60l12-14 12 14v28h18v24h30V84h24V50h8V30h10v20h8v62h26V92h30v20h22V76h18V40l18-24 18 24v72h24V98h28v14h20V64h34v48h18V86h26v26h22V52h10V36h14v16h10v60h30V90h20v22h26V72h22v40h24V58l16-18 16 18v54h20V94h30v18h22V80h28v32h18V66h12V48h16v64h26V96h24v16h30V74h26v38h20V88h22v24h34V60h24v52h18V100h30v12h26V82h20v30h40v38z"/>
-  </svg>
+<nav class="topbar" aria-label="Main navigation"><div class="wrap nav-inner">
+  <a class="wordmark" href="#top" aria-label="Luck Society home"><svg class="brand-coin" viewBox="29 221 248 245" aria-hidden="true"><image href="assets/luck-society-reference.png" width="702" height="580"/></svg><span>LUCK <b>SOCIETY</b></span></a>
+  <div class="nav-links"><a href="#listTitle">The board</a><a href="#edgePanel">Edge screener</a><a href="#paperJournal">Paper journal</a></div>
+  <span class="data-badge"><i></i> POLYMARKET DATA</span>
+</div></nav>
+<header class="hero" id="top">
+  <div class="hero-art" aria-hidden="true"><svg viewBox="275 0 427 350" preserveAspectRatio="xMaxYMid meet"><defs><clipPath id="heroArtCrop"><rect x="275" y="0" width="427" height="350"/></clipPath></defs><image clip-path="url(#heroArtCrop)" href="assets/luck-society-reference.png" width="702" height="580"/></svg></div>
+  <div class="hero-shade"></div>
   <div class="hero-inner wrap">
-    <svg class="coin" viewBox="0 0 100 100" aria-hidden="true">
-      <defs>
-        <radialGradient id="cg" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff2bf"/><stop offset=".45" stop-color="#f0c24b"/><stop offset=".85" stop-color="#b17a14"/><stop offset="1" stop-color="#6e4b0a"/></radialGradient>
-        <radialGradient id="lg" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#5fe596"/><stop offset=".6" stop-color="#1c9a45"/><stop offset="1" stop-color="#0d5c27"/></radialGradient>
-      </defs>
-      <circle cx="50" cy="50" r="48" fill="url(#cg)"/>
-      <circle cx="50" cy="50" r="41" fill="none" stroke="#8a5f0e" stroke-width="1.5" opacity=".7"/>
-      <g fill="url(#lg)" stroke="#0b4a1f" stroke-width="1">
-        <ellipse cx="38" cy="38" rx="11" ry="11"/><ellipse cx="62" cy="38" rx="11" ry="11"/><ellipse cx="38" cy="62" rx="11" ry="11"/><ellipse cx="62" cy="62" rx="11" ry="11"/>
-      </g>
-      <path d="M50 50 Q58 72 66 82" stroke="#0d5c27" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-      <circle cx="50" cy="50" r="5" fill="#1c9a45"/>
-    </svg>
-    <h1>LUCK SOCIETY</h1>
-    <div class="tag">Sharp Money <b>Scanner</b> · Polymarket</div>
-    <div class="deco-rule"><span></span>☘<span></span></div>
-    <button class="scan" id="scanBtn">SCAN</button>
-    <div class="progress" id="prog"><i></i></div>
-    <div class="scan-sub" id="scanSub">Pulls every open bet from the top Polymarket sports &amp; esports traders.</div>
+    <div class="hero-copy"><div class="eyebrow">THE SHARP MONEY DESK <span>EST. 2026</span></div>
+      <div class="hero-brand"><svg class="brand-coin" viewBox="29 221 248 245" aria-hidden="true"><image href="assets/luck-society-reference.png" width="702" height="580"/></svg><h1>LUCK<br><span>SOCIETY</span></h1></div>
+      <p class="hero-caption">Follow the money. <br><strong>Find your edge.</strong></p>
+      <p class="hero-description">Sports intelligence from Polymarket’s sharpest wallets.<br>One board. Every position. A clearer view.</p>
+      <div class="scan-line"><button class="scan" id="scanBtn">SCAN</button><span class="scan-hint">Read the market.<br>Make your own call.</span></div>
+      <div class="progress" id="prog"><i></i></div>
+      <div class="scan-sub" id="scanSub" role="status" aria-live="polite">Scan the tracked sports &amp; esports wallets to get started.</div>
+    </div>
   </div>
+  <div class="hero-bottom wrap"><span>SPORTS &amp; ESPORTS</span><span>PUBLIC ON-CHAIN POSITIONS</span><span>INDEPENDENT THINKING. SHARP SIGNALS.</span></div>
 </header>
 
 <main class="wrap">
+  <div class="desk-heading"><div><span class="eyebrow">THE MARKET, IN FOCUS</span><h2>Your daily advantage.</h2></div><span class="board-caption">Current holdings. Clear context.</span></div>
   <div class="stats" id="stats">
     <div class="stat"><div class="k">Traders tracked</div><div class="v gold" id="sTraders">—</div></div>
     <div class="stat"><div class="k">Bets shown</div><div class="v" id="sBets">—</div></div>
@@ -271,7 +266,7 @@ footer a{color:var(--gold)}
     <div class="day-body"><div class="roster" id="roster"></div></div>
   </details>
 
-  <div class="controls" id="controls">
+  <div class="controls" id="controls"><div class="filter-heading"><span>01 <b>Explore the board</b></span><span>Filter the signal.</span></div>
     <div class="tabs" id="tabs"></div>
     <div class="row2">
       <div class="seg" id="viewSeg"><button data-v="day" class="on">By day</button><button data-v="trader">By trader</button></div>
@@ -318,7 +313,7 @@ footer a{color:var(--gold)}
 
   <section>
     <div class="sec-h"><h2 id="listTitle">Open Bets</h2><p id="listSub"></p></div>
-    <div id="list"><div class="empty"><div class="big">Feeling lucky?</div>Hit <b>SCAN</b> to pull every open position live from Polymarket.</div></div>
+    <div id="list"><div class="empty"><svg class="brand-coin" viewBox="29 221 248 245" aria-hidden="true"><image href="assets/luck-society-reference.png" width="702" height="580"/></svg><div class="eyebrow">YOUR NEXT READ STARTS HERE</div><div class="big">The board is waiting.</div><p>Scan the roster to see current positions,<br>sharp agreement, and the bets behind the numbers.</p><a class="empty-link" href="#top">BACK TO SCAN ↗</a></div></div>
   </section>
 
   <footer>
