@@ -1,0 +1,14 @@
+name = "polysharp-discord"
+main = "worker.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+# Fill these two in from the Discord Developer Portal (your PolySharp application -> General Information).
+DISCORD_APPLICATION_ID = "REPLACE_WITH_APPLICATION_ID"
+DISCORD_PUBLIC_KEY = "REPLACE_WITH_PUBLIC_KEY"
+GITHUB_REPO = "lucksociety/polymarket-sharp-scanner"
+GITHUB_REF = "main"
+# Secrets (set with `npx wrangler secret put NAME`, never in this file):
+#   GITHUB_TOKEN  fine-grained token, repo lucksociety/polymarket-sharp-scanner, Actions: read & write
+#   RELAY_KEY     any long random string; set the SAME value as the RELAY_KEY Actions secret
