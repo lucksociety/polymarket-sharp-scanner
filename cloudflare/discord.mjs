@@ -34,6 +34,7 @@ export async function handle(request,env){
   return ephemeral('The background scan could not be queued. Please try again shortly.');
  }
 }
+const DASHBOARD='https://lucksociety.github.io/polymarket-sharp-scanner/';
 const safe=x=>String(x??'').replace(/([\\`*_{}\[\]()<>~|])/g,'\\$1').replace(/@/g,'@\u200b').slice(0,180);
 const percent=x=>Number.isFinite(x)?(100*x).toFixed(1)+'%':'unknown';
 export function report({bets=[],warnings=[],positionCount=0,rosterCount=0,scannedWallets=rosterCount,candidateCount=0,historyCount=0,historyPending=0,options,complete=true,now=Date.now()}){
@@ -54,16 +55,14 @@ export function convictionReport({plays=[],positions=[],warnings=[],positionCoun
  const summary=complete?'Highest-conviction upcoming bets from the dashboard.':'Partial scan — highest conviction among loaded wallets; missing wallets may change the ranking.';
  const embeds=[{title:'☘ Luck Society · Highest Conviction',color:0xd4b259,description:summary+`\n${positionCount.toLocaleString()} positions loaded · ${scannedWallets}/${rosterCount} wallets scanned\nSport: ${safe(options.sport)} · Minimum $1,000 position / 4% open cost share · $25,000 minimum book`,fields:[{name:'Ranking',value:'Net directional entry cost ÷ the bettor’s total open entry cost, highest first. One bet per bettor and market, matching the dashboard’s top cards. Conviction measures concentration; it is not a verified edge or win probability.'}],timestamp:new Date(asOf).toISOString()}];
  if(!plays.length)embeds[0].fields.push({name:'No matching upcoming bets',value:'No loaded positions match the dashboard’s conviction filters.'});
- for(const [i,p]of plays.entries()){
+ for(const [i,p]of plays.slice(0,options.limit).entries()){
   const supporters=new Set(positions.filter(x=>x.conditionId===p.conditionId&&x.outcomeIndex===p.outcomeIndex&&x.netShares>0).map(x=>x.wallet));
   const opponents=new Set(positions.filter(x=>x.conditionId===p.conditionId&&x.outcomeIndex!==p.outcomeIndex&&x.netShares>0).map(x=>x.wallet));
   const tier=p.conv>=.1?'MAX':p.conv>=.04?'HIGH':p.conv>=.01?'MEDIUM':'LOW';
-  embeds.push({title:`${i+1}. ${safe(p.title)}`.slice(0,240),url:'https://polymarket.com/event/'+encodeURIComponent(p.eventSlug),color:0x24844b,description:`**${safe(p.outcome)}** · ${safe(p.sport)}\n**${percent(p.conv)} of open cost · ${tier} conviction**\nBettor: **${safe(p.trader)}**\nNet entry cost: **$${p.remainingCost.toLocaleString('en-US',{maximumFractionDigits:0})}** · Open book: $${p.costBook.toLocaleString('en-US',{maximumFractionDigits:0})}\nPosition market value: $${p.currentValue.toLocaleString('en-US',{maximumFractionDigits:0})}\nMarket price snapshot: **${(p.curPrice*100).toFixed(1)}¢**\nSupporting / opposing wallets: **${supporters.size} / ${opponents.size}**\nStarts <t:${Math.floor(p.game/1000)}:f>`,footer:{text:'Price is an indicative snapshot, not a guaranteed fill.'}});
+  embeds[0].fields.push({name:`${i+1}. ${safe(p.title).slice(0,120)}`,value:`**${safe(p.outcome).slice(0,100)}** · **${percent(p.conv)} · ${tier} conviction**\n${safe(p.trader).slice(0,80)} · ${p.remainingCost.toLocaleString('en-US',{maximumFractionDigits:0})} net entry cost · ${(p.curPrice*100).toFixed(1)}¢ indicative\nSupport / opposition: ${supporters.size} / ${opponents.size} · Starts <t:${Math.floor(p.game/1000)}:f>`});
  }
  if(warnings.length)embeds[0].fields.push({name:'Data notes',value:warnings.slice(0,3).map(safe).join('\n').slice(0,700)});
- const size=()=>JSON.stringify(embeds).length;
- while(size()>5600&&embeds.length>1)embeds.pop();
- return {content:'',embeds,allowed_mentions:{parse:[]}};
+ return {content:`[Open the Luck Society dashboard](${DASHBOARD})`,embeds,allowed_mentions:{parse:[]}};
 }
 export async function editReply(job,payload,fetcher=fetch){
  const url=`https://discord.com/api/v10/webhooks/${job.applicationId}/${encodeURIComponent(job.token)}/messages/@original`;

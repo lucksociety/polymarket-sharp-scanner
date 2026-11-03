@@ -49,5 +49,5 @@ test('default Workflow publishes dashboard conviction cards with no historical o
  const rows=[p,{...p,wallet:'b',trader:'B',conv:.3,remainingCost:30000}],sent=[];
  const h=harness(async()=>{throw Error('Default should not need historical/quote calls');},undefined,{E,pool,convictionReport,roster:async()=>rows.map(p=>({wallet:p.wallet,name:p.trader})),collect:async()=>({positions:rows,candidates:rows,scannedWallets:2,complete:true,warnings:[]}),editReply:async(_job,payload)=>{sent.push(payload);return{delivered:true};}});
  const w=new h.PolysharpWorkflow();w.env=h.env;const result=await w.run({instanceId:'test-scan',payload:{receivedAt:now,options:validateOptions([])}},h.step);
- assert.equal(result.mode,'conviction');assert.equal(result.published,2);assert.deepEqual(result.top.map(p=>p.wallet),['b','a']);assert.ok(h.created.every(j=>j.params.kind==='wallet'));assert.match(sent.at(-1).embeds[1].description,/30.0%/);
+ assert.equal(result.mode,'conviction');assert.equal(result.published,2);assert.deepEqual(result.top.map(p=>p.wallet),['b','a']);assert.ok(h.created.every(j=>j.params.kind==='wallet'));assert.match(sent.at(-1).embeds[0].fields[1].value,/30.0%/);
 });
