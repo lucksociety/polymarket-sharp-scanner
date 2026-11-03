@@ -18,7 +18,7 @@ export function compact(url,json,conditionIds){
  const path=new URL(url).pathname;
  if(path==='/v2/activity')return {...json,data:json.data?.map(x=>pick(x,['token_id','condition_id','event_slug','type','side','price','size','timestamp','outcome_index','transaction_hash','is_combo']))};
  if(path==='/v2/positions')return {...json,data:json.data?.map(x=>pick(x,['token_id','condition_id','current_size','avg_price','entry_cost_usdc','total_cost_usdc','current_price','current_value','event_slug','outcome','outcome_index','end_date','first_entry_at','last_event_at','opposite_token_id','redeemable','title']))};
- if(path==='/events')return json.map(x=>({slug:x.slug,title:x.title,tags:x.tags?.map(t=>({slug:t.slug})),markets:x.markets?.filter(m=>m.gameStartTime&&(!conditionIds||conditionIds.has(m.conditionId))).map(m=>pick(m,['conditionId','gameStartTime']))}));
+ if(path==='/events')return json.map(x=>({slug:x.slug,title:x.title,endDate:x.endDate,tags:x.tags?.map(t=>({slug:t.slug})),markets:x.markets?.filter(m=>m.gameStartTime&&(!conditionIds||conditionIds.has(m.conditionId))).map(m=>pick(m,['conditionId','gameStartTime']))}));
  if(path.startsWith('/clob-markets/'))return pick(json,['t','fd','mos','ao']);
  return json;
 }

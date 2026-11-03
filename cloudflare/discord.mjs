@@ -19,12 +19,13 @@ export async function handle(request,env){
  let interaction;try{interaction=JSON.parse(body);}catch{return new Response('Invalid JSON',{status:400});}
  if(interaction.type===1)return json({type:1});
  if(interaction.application_id!==(env.DISCORD_APPLICATION_ID||APPLICATION_ID))return new Response('Wrong application',{status:403});
- if(interaction.type!==2||interaction.data?.name!=='polysharp')return ephemeral('This endpoint handles /polysharp.');
+ const name=interaction.data?.name;
+ if(interaction.type!==2||!['polysharp','predictions'].includes(name))return ephemeral('This endpoint handles /polysharp and /predictions.');
  if(!/^\d{16,22}$/.test(interaction.id||'')||!interaction.token||!/^\d{16,22}$/.test(interaction.guild_id||''))return ephemeral('Use /polysharp in a server where the app is installed.');
  const allowed=String(env.ALLOWED_GUILD_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);if(allowed.length&&!allowed.includes(interaction.guild_id))return ephemeral('This server is not enabled for /polysharp.');
- let options;try{options=validateOptions(interaction.data.options||[]);}catch{return ephemeral('Invalid options. Use the choices and numeric ranges shown by Discord.');}
+ let options;try{options=name==='predictions'?{ranking:'predictions'}:validateOptions(interaction.data.options||[]);}catch{return ephemeral('Invalid options. Use the choices and numeric ranges shown by Discord.');}
  if(!env.SCANS||!env.CACHE)return ephemeral('Polysharp is being configured. The background scanner is not ready yet.');
- const receivedAt=Date.now(),id=`scan-${interaction.guild_id}-${Math.floor(receivedAt/60000)}`;
+ const receivedAt=Date.now(),id=`${name==='predictions'?'pred':'scan'}-${interaction.guild_id}-${Math.floor(receivedAt/60000)}`;
  try{
   await env.SCANS.create({id,params:{applicationId:interaction.application_id,token:interaction.token,interactionId:interaction.id,guildId:interaction.guild_id,receivedAt,options}});
   // Public deferred response; the workflow edits this same message, without extra channel posts.
@@ -64,12 +65,26 @@ export function convictionReport({plays=[],positions=[],warnings=[],positionCoun
  if(warnings.length)embeds[0].fields.push({name:'Data notes',value:warnings.slice(0,3).map(safe).join('\n').slice(0,700)});
  return {content:`[Open the Luck Society dashboard](${DASHBOARD})`,embeds,allowed_mentions:{parse:[]}};
 }
+export function predictionsReport(plays,wallets,total,count,warnings){
+ const description=[
+  warnings.length?'Partial scan. Missing data may change the rankings.':'Highest conviction among tracked non-sports positions resolving within 30 days.',
+  `${wallets}/${total} wallets scanned · ${count.toLocaleString()} open positions`,
+  'Conviction is the position’s share of the trader’s open book.',
+  ...warnings.slice(0,4).map(safe)
+ ].join('\n');
+ const fields=plays.map((p,i)=>({
+  name:`${i+1}. ${safe(p.title).slice(0,120)}`,
+  value:`**${safe(p.outcome).slice(0,100)} · ${percent(p.conv)} of book**\n${safe(p.trader).slice(0,80)} · $${p.currentValue.toLocaleString('en-US',{maximumFractionDigits:0})} · ${p.category} · Ends <t:${Math.floor(p.end/1000)}:d>`
+ }));
+ if(!fields.length)fields.push({name:'No matching plays',value:'No loaded positions met the scanner’s filters.'});
+ return {content:'[Open the Smart Money Scanner](https://lucksociety.github.io/polymarket-smart-money-scanner/)',embeds:[{title:'☘ Luck Society · Smart Money Predictions',color:0xd4b259,description,fields}],allowed_mentions:{parse:[]}};
+}
 export async function editReply(job,payload,fetcher=fetch){
  const url=`https://discord.com/api/v10/webhooks/${job.applicationId}/${encodeURIComponent(job.token)}/messages/@original`;
  const r=await fetcher(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
  if(!r.ok){await r.body?.cancel();throw Error('Discord response HTTP '+r.status);}await r.body?.cancel();return {delivered:true};
 }
-export async function register(token,fetcher=fetch){
- const r=await fetcher(`https://discord.com/api/v10/applications/${APPLICATION_ID}/commands`,{method:'POST',headers:{Authorization:'Bot '+token,'Content-Type':'application/json'},body:JSON.stringify(command),signal:AbortSignal.timeout(20000)});
+export async function register(token,fetcher=fetch,definition=command){
+ const r=await fetcher(`https://discord.com/api/v10/applications/${APPLICATION_ID}/commands`,{method:'POST',headers:{Authorization:'Bot '+token,'Content-Type':'application/json'},body:JSON.stringify(definition),signal:AbortSignal.timeout(20000)});
  if(!r.ok){await r.body?.cancel();throw Error('Command registration HTTP '+r.status);}const result=await r.json();return {id:result.id,name:result.name,application_id:result.application_id};
 }

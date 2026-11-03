@@ -1,7 +1,9 @@
 import {WorkflowEntrypoint} from 'cloudflare:workers';
 import E from '../engine.js';
-import {handle,report,convictionReport,editReply} from './discord.mjs';
+import {handle,report,convictionReport,predictionsReport,editReply} from './discord.mjs';
 import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage} from './scanner.mjs';
+
+import {predictionsRoster,fetchPredictionsWallet,rankPredictions} from './predictions.mjs';
 
 export default {fetch:handle};
 const opts={retries:{limit:2,delay:'10 seconds',backoff:'exponential'},timeout:'45 seconds'};
@@ -75,7 +77,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    try{
     const get=job.kind==='wallet'?historyGet(step,this.env,job):durableGet(step,'child');
     let value;
-    try{value=job.kind==='wallet'?await fetchWallet(job.trader,get,job.asOf):await quote(job.position,get);}
+    try{value=job.kind==='wallet'?await (job.predictions?fetchPredictionsWallet:fetchWallet)(job.trader,get,job.asOf):await quote(job.position,get);}
     catch(error){
      if(job.kind==='wallet'&&get.exhausted()&&!get.failed()&&(job.sequence||0)<10){
       const sequence=(job.sequence||0)+1,id='wallet-more-'+await digest((job.resultId||event.instanceId)+'|'+sequence);
@@ -108,17 +110,26 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
   }
   const deadline=job.receivedAt+10*60000,publicBudget={used:0,limit:40},get=durableGet(step,'scan',deadline,publicBudget),warnings=[];
   try{
-   const traders=await roster(get,warnings);
-   await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} sharp wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
+   const predictions=job.options.ranking==='predictions';
+   const traders=await (predictions?predictionsRoster:roster)(get,warnings);
+   await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':'sharp'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
    const {evidence,missing}=job.options.ranking==='edge'?await loadEvidence(step,this.env,traders,job.receivedAt):{evidence:{history:[]},missing:[]};
    const historyPending=job.options.ranking==='edge'?await warmHistory(step,this.env,missing,job.receivedAt):0;
-   const walletJobs=traders.map((t,i)=>({id:'wallet-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',trader:t,asOf:job.receivedAt,delay:1000+i*2500}}));
+   const walletJobs=traders.map((t,i)=>({id:'wallet-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*2500}}));
    await launchBatch(step,this.env,'launch-wallets',walletJobs);
    const walletData=new Map(),retry=[];
    await pool(traders,3,async t=>{try{walletData.set(t.wallet,await result(step,this.env,'wallet-'+event.instanceId+'-'+t.wallet,deadline));}catch{retry.push(t);}});
-   const retryJobs=retry.map((t,i)=>({id:'retry-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',trader:t,asOf:job.receivedAt,delay:1000+i*3000}}));
+   const retryJobs=retry.map((t,i)=>({id:'retry-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*3000}}));
    await launchBatch(step,this.env,'retry-missing-wallets',retryJobs);
    await pool(retry,3,async t=>{try{walletData.set(t.wallet,await result(step,this.env,'retry-'+event.instanceId+'-'+t.wallet,deadline));}catch{}});
+   if(predictions){
+    if(walletData.size<traders.length)warnings.push('Some wallets could not be loaded');
+    const loaded=[...walletData.values()];
+    const plays=await rankPredictions(get,loaded.flatMap(wallet=>wallet.positions),warnings);
+    const count=loaded.reduce((total,wallet)=>total+wallet.count,0);
+    await step.do('send-predictions-result',opts,()=>editReply(job,predictionsReport(plays,loaded.length,traders.length,count,warnings)));
+    return {mode:'predictions',published:plays.length,complete:!warnings.length};
+   }
    const scan=await collect(get,traders,{...job.options,asOf:job.receivedAt},(_fn,t)=>{if(!walletData.has(t.wallet))throw Error('Wallet unavailable after retry');return walletData.get(t.wallet);});
    if(warnings.length)scan.complete=false;warnings.push(...scan.warnings);
    if(job.options.ranking!=='edge'){
@@ -157,7 +168,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    await step.do('send-result',opts,()=>editReply(job,payload));
    return {published:bets.length,complete:scan.complete,positions:scan.positions.length,wallets:scan.scannedWallets,roster:traders.length,candidates:keys.length};
   }catch{
-   await step.do('send-failure',opts,()=>editReply(job,{content:'☘ /polysharp could not finish a complete scan. No picks were promoted. Please try again shortly; public API failures or platform limits may have interrupted this run.',embeds:[],allowed_mentions:{parse:[]}}));
+   await step.do('send-failure',opts,()=>editReply(job,{content:`☘ /${job.options.ranking==='predictions'?'predictions':'polysharp'} could not finish a complete scan. No picks were promoted. Please try again shortly; public API failures or platform limits may have interrupted this run.`,embeds:[],allowed_mentions:{parse:[]}}));
    return {published:0,incomplete:true};
   }
  }
