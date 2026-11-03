@@ -60,7 +60,7 @@ export function convictionReport({plays=[],positions=[],warnings=[],positionCoun
   const supporters=new Set(positions.filter(x=>x.conditionId===p.conditionId&&x.outcomeIndex===p.outcomeIndex&&x.netShares>0).map(x=>x.wallet));
   const opponents=new Set(positions.filter(x=>x.conditionId===p.conditionId&&x.outcomeIndex!==p.outcomeIndex&&x.netShares>0).map(x=>x.wallet));
   const tier=p.conv>=.1?'MAX':p.conv>=.04?'HIGH':p.conv>=.01?'MEDIUM':'LOW';
-  embeds[0].fields.push({name:`${i+1}. ${safe(p.title).slice(0,120)}`,value:`**${safe(p.outcome).slice(0,100)}** · **${percent(p.conv)} · ${tier} conviction**\n${safe(p.trader).slice(0,80)} · ${p.remainingCost.toLocaleString('en-US',{maximumFractionDigits:0})} net entry cost · ${(p.curPrice*100).toFixed(1)}¢ indicative\nSupport / opposition: ${supporters.size} / ${opponents.size} · Starts <t:${Math.floor(p.game/1000)}:f>`});
+  embeds[0].fields.push({name:`${i+1}. ${safe(p.title).slice(0,120)}`,value:`**${safe(p.outcome).slice(0,100)}** · **${percent(p.conv)} · ${tier} conviction** · **Price: ${Number.isFinite(Number(p.curPrice))&&p.curPrice!=null?(Number(p.curPrice)*100).toFixed(1)+'¢':'unavailable'}**\n${safe(p.trader).slice(0,80)} · $${p.remainingCost.toLocaleString('en-US',{maximumFractionDigits:0})} net entry cost\nSupport / opposition: ${supporters.size} / ${opponents.size} · Starts <t:${Math.floor(p.game/1000)}:f>`});
  }
  if(warnings.length)embeds[0].fields.push({name:'Data notes',value:warnings.slice(0,3).map(safe).join('\n').slice(0,700)});
  return {content:`[Open the Luck Society dashboard](${DASHBOARD})`,embeds,allowed_mentions:{parse:[]}};
