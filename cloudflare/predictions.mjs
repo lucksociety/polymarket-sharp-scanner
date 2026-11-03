@@ -89,7 +89,7 @@ export async function fetchPredictionsWallet(trader,get){
   outcomes.set(p.conditionId,p.outcomeIndex);
  }
  return {count:open.length,positions:book<25000?[]:open.filter(p=>p.currentValue>=1000&&p.currentValue/book>=.01&&!hedged.has(p.conditionId))
-  .map(p=>({title:p.title,outcome:p.outcome,eventSlug:p.eventSlug,endDate:p.endDate,conditionId:p.conditionId,currentValue:p.currentValue,conv:Math.min(1,p.currentValue/book),trader:trader.name,wallet:trader.wallet}))};
+  .map(p=>({title:p.title,outcome:p.outcome,eventSlug:p.eventSlug,endDate:p.endDate,conditionId:p.conditionId,currentValue:p.currentValue,curPrice:p.curPrice,conv:Math.min(1,p.currentValue/book),trader:trader.name,wallet:trader.wallet}))};
 }
 
 export async function rankPredictions(get,positions,warnings,now=Date.now()){

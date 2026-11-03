@@ -74,7 +74,7 @@ export function predictionsReport(plays,wallets,total,count,warnings){
  ].join('\n');
  const fields=plays.map((p,i)=>({
   name:`${i+1}. ${safe(p.title).slice(0,120)}`,
-  value:`**${safe(p.outcome).slice(0,100)} · ${percent(p.conv)} of book**\n${safe(p.trader).slice(0,80)} · $${p.currentValue.toLocaleString('en-US',{maximumFractionDigits:0})} · ${p.category} · Ends <t:${Math.floor(p.end/1000)}:d>`
+  value:`**${safe(p.outcome).slice(0,100)} · ${percent(p.conv)} of book** · Price: ${Number.isFinite(Number(p.curPrice))&&p.curPrice!=null?(Number(p.curPrice)*100).toFixed(1)+'¢':'unavailable'}\n${safe(p.trader).slice(0,80)} · $${p.currentValue.toLocaleString('en-US',{maximumFractionDigits:0})} · ${p.category} · Ends <t:${Math.floor(p.end/1000)}:d>`
  }));
  if(!fields.length)fields.push({name:'No matching plays',value:'No loaded positions met the scanner’s filters.'});
  return {content:'[Open the Smart Money Scanner](https://lucksociety.github.io/polymarket-smart-money-scanner/)',embeds:[{title:'☘ Luck Society · Smart Money Predictions',color:0xd4b259,description,fields}],allowed_mentions:{parse:[]}};
