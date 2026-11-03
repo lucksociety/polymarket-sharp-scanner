@@ -1,0 +1,839 @@
+{
+ "updated": "2026-11-03",
+ "method": "Per-sport settled profit over the last 120 days (Polymarket Data API v2 /positions CLOSED + REDEEMABLE). Up to 8 wallets per sport; >=15 settled bets in the sport, >=3% return on stake, sport profit floor, active in the last 21 days.",
+ "traders": [
+  {
+   "name": "BreakTheBank",
+   "wallet": "0xf0318c32136c2db7fec88b84869aee6a1106c80c",
+   "spec": "NFL · NBA",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 8231089,
+     "roi": 0.306,
+     "bets": 283,
+     "winRate": 0.53
+    },
+    {
+     "sport": "NBA",
+     "pnl": 779790,
+     "roi": 0.043,
+     "bets": 175,
+     "winRate": 0.411
+    }
+   ]
+  },
+  {
+   "name": "0x99a0…415f",
+   "wallet": "0x6e2c0e9474af7d720e5aba2a5b0bb6f723b7787c",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 1506762,
+     "roi": 0.064,
+     "bets": 7350,
+     "winRate": 0.539
+    }
+   ]
+  },
+  {
+   "name": "0xd967…d140",
+   "wallet": "0xd570e634aeb745d6501566dba5f81a555cc7e4f8",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 1237469,
+     "roi": 0.341,
+     "bets": 51,
+     "winRate": 0.725
+    }
+   ]
+  },
+  {
+   "name": "0x2c33…0563",
+   "wallet": "0x2c335066fe58fe9237c3d3dc7b275c2a034a0563",
+   "spec": "NBA · UFC",
+   "sports": [
+    {
+     "sport": "NBA",
+     "pnl": 1227021,
+     "roi": 0.055,
+     "bets": 729,
+     "winRate": 0.665
+    },
+    {
+     "sport": "UFC",
+     "pnl": 42486,
+     "roi": 0.034,
+     "bets": 88,
+     "winRate": 0.386
+    }
+   ]
+  },
+  {
+   "name": "Mooseborzoiii",
+   "wallet": "0x57a85952044f2c8e4d31b475aab6987d2f98ebc2",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 1192134,
+     "roi": 0.077,
+     "bets": 81,
+     "winRate": 0.531
+    }
+   ]
+  },
+  {
+   "name": "0xBc43…96d3",
+   "wallet": "0xbc43c8bfbc4d77c2fc9011adad38ba43b88996d3",
+   "spec": "NFL",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 1151279,
+     "roi": 0.12,
+     "bets": 291,
+     "winRate": 0.481
+    }
+   ]
+  },
+  {
+   "name": "mentionmarket",
+   "wallet": "0xc3acf5878a03523d09a3ac859943445d7baeb964",
+   "spec": "MLB",
+   "sports": [
+    {
+     "sport": "MLB",
+     "pnl": 1028103,
+     "roi": 0.541,
+     "bets": 41,
+     "winRate": 0.512
+    }
+   ]
+  },
+  {
+   "name": "ndb1",
+   "wallet": "0xfea31bc088000ff909be1dfd8d0e3f2c7ef2d227",
+   "spec": "Soccer",
+   "sports": [
+    {
+     "sport": "Soccer",
+     "pnl": 1004873,
+     "roi": 0.06,
+     "bets": 321,
+     "winRate": 0.53
+    }
+   ]
+  },
+  {
+   "name": "Diabolical-Prize",
+   "wallet": "0x7c37b52eb226bcb9411375ec48b0169663fb6aeb",
+   "spec": "NFL",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 986232,
+     "roi": 0.191,
+     "bets": 46,
+     "winRate": 0.478
+    }
+   ]
+  },
+  {
+   "name": "WTSA",
+   "wallet": "0x04d5524a0a5af2eca6e39e03defc261d42fe66d8",
+   "spec": "Soccer",
+   "sports": [
+    {
+     "sport": "Soccer",
+     "pnl": 937493,
+     "roi": 0.099,
+     "bets": 200,
+     "winRate": 0.52
+    }
+   ]
+  },
+  {
+   "name": "Talvez10",
+   "wallet": "0xa71093cafc0c099b4ccab24c3cb8018d817923c4",
+   "spec": "MLB · NHL",
+   "sports": [
+    {
+     "sport": "MLB",
+     "pnl": 897917,
+     "roi": 0.139,
+     "bets": 434,
+     "winRate": 0.461
+    },
+    {
+     "sport": "NHL",
+     "pnl": 277346,
+     "roi": 0.28,
+     "bets": 32,
+     "winRate": 0.656
+    }
+   ]
+  },
+  {
+   "name": "Sassy-Bucket",
+   "wallet": "0x4bff30af91642dc7d2b19a8664378fe55c45fc26",
+   "spec": "NFL",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 887867,
+     "roi": 0.099,
+     "bets": 65,
+     "winRate": 0.538
+    }
+   ]
+  },
+  {
+   "name": "theowalcott",
+   "wallet": "0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa",
+   "spec": "Soccer",
+   "sports": [
+    {
+     "sport": "Soccer",
+     "pnl": 882570,
+     "roi": 0.08,
+     "bets": 255,
+     "winRate": 0.522
+    }
+   ]
+  },
+  {
+   "name": "mooseborzoii",
+   "wallet": "0x1f3a646ce5cbe2c70270e7a46161d89b7c7b895d",
+   "spec": "NHL · Soccer",
+   "sports": [
+    {
+     "sport": "NHL",
+     "pnl": 823344,
+     "roi": 0.317,
+     "bets": 412,
+     "winRate": 0.505
+    },
+    {
+     "sport": "Soccer",
+     "pnl": 382210,
+     "roi": 0.074,
+     "bets": 627,
+     "winRate": 0.517
+    }
+   ]
+  },
+  {
+   "name": "monkeymashingkeyboard",
+   "wallet": "0x684baa57c338c2549aec0aa3f034f695d72a8409",
+   "spec": "NBA · MLB",
+   "sports": [
+    {
+     "sport": "NBA",
+     "pnl": 775630,
+     "roi": 0.125,
+     "bets": 235,
+     "winRate": 0.519
+    },
+    {
+     "sport": "MLB",
+     "pnl": 399510,
+     "roi": 0.064,
+     "bets": 527,
+     "winRate": 0.55
+    }
+   ]
+  },
+  {
+   "name": "gmpm2",
+   "wallet": "0x67542c3219b37fd1610aad290676ff91cdbfe3bc",
+   "spec": "NFL",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 760459,
+     "roi": 0.048,
+     "bets": 318,
+     "winRate": 0.516
+    }
+   ]
+  },
+  {
+   "name": "Jsram",
+   "wallet": "0x83720820a8aa6c3f20ad71850e7a1a17d16c5223",
+   "spec": "Soccer",
+   "sports": [
+    {
+     "sport": "Soccer",
+     "pnl": 749225,
+     "roi": 0.045,
+     "bets": 190,
+     "winRate": 0.458
+    }
+   ]
+  },
+  {
+   "name": "keeptheblueflagflyinghigh",
+   "wallet": "0x0d6a1ada6d7ff785ab4b7263d9ce8e2baa85aa98",
+   "spec": "NBA · NHL",
+   "sports": [
+    {
+     "sport": "NBA",
+     "pnl": 743173,
+     "roi": 0.067,
+     "bets": 3081,
+     "winRate": 0.49
+    },
+    {
+     "sport": "NHL",
+     "pnl": 118948,
+     "roi": 0.333,
+     "bets": 226,
+     "winRate": 0.509
+    }
+   ]
+  },
+  {
+   "name": "ethanaz",
+   "wallet": "0xf28e42d20e4826f2b10a24bc952001697947cab2",
+   "spec": "MLB",
+   "sports": [
+    {
+     "sport": "MLB",
+     "pnl": 729681,
+     "roi": 0.636,
+     "bets": 25,
+     "winRate": 0.72
+    }
+   ]
+  },
+  {
+   "name": "Sunshine.Smile",
+   "wallet": "0xd3b034d7bfb2473fb252d0414646d9786bac329e",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 655785,
+     "roi": 0.047,
+     "bets": 1630,
+     "winRate": 0.552
+    }
+   ]
+  },
+  {
+   "name": "0xC9BF…255F",
+   "wallet": "0xc9bfc7986767173b4f1c3fc9b2c6b255fc7381c0",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 642865,
+     "roi": 0.284,
+     "bets": 584,
+     "winRate": 0.563
+    }
+   ]
+  },
+  {
+   "name": "Elaran1993",
+   "wallet": "0xb7271c112cbd83eb4c1ef1b554ff963604ae2a9d",
+   "spec": "NFL",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 593012,
+     "roi": 0.461,
+     "bets": 20,
+     "winRate": 0.65
+    }
+   ]
+  },
+  {
+   "name": "0xf3ce7f",
+   "wallet": "0xf3ce7f04dde4f8c5aed19a20e5ecd8520e5ca57a",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 565584,
+     "roi": 0.117,
+     "bets": 840,
+     "winRate": 0.604
+    }
+   ]
+  },
+  {
+   "name": "Kch-Temp",
+   "wallet": "0x924379a79c64b77ad5816ad362122a5f6228658e",
+   "spec": "NFL",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 521030,
+     "roi": 0.067,
+     "bets": 86,
+     "winRate": 0.547
+    }
+   ]
+  },
+  {
+   "name": "NS13",
+   "wallet": "0x1610db79f753a80207e1d66716be9e91e627ae49",
+   "spec": "MLB",
+   "sports": [
+    {
+     "sport": "MLB",
+     "pnl": 503293,
+     "roi": 0.185,
+     "bets": 151,
+     "winRate": 0.543
+    }
+   ]
+  },
+  {
+   "name": "S-Works",
+   "wallet": "0xee00ba338c59557141789b127927a55f5cc5cea1",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 484515,
+     "roi": 0.062,
+     "bets": 66,
+     "winRate": 0.621
+    }
+   ]
+  },
+  {
+   "name": "0xb4F9…c9A7",
+   "wallet": "0xb4f978be63cdf75554b0b46a4262a6db597cc9a7",
+   "spec": "Soccer",
+   "sports": [
+    {
+     "sport": "Soccer",
+     "pnl": 474779,
+     "roi": 0.376,
+     "bets": 84,
+     "winRate": 0.524
+    }
+   ]
+  },
+  {
+   "name": "jakepaulthegoat2008",
+   "wallet": "0x6ac5bb06a9eb05641fd5e82640268b92f3ab4b6e",
+   "spec": "NBA · MLB",
+   "sports": [
+    {
+     "sport": "NBA",
+     "pnl": 465623,
+     "roi": 0.063,
+     "bets": 137,
+     "winRate": 0.584
+    },
+    {
+     "sport": "MLB",
+     "pnl": 332632,
+     "roi": 0.56,
+     "bets": 77,
+     "winRate": 0.442
+    }
+   ]
+  },
+  {
+   "name": "johnbaster",
+   "wallet": "0x31864feb9d25dee93728c6225ba891530967e9ca",
+   "spec": "Esports",
+   "sports": [
+    {
+     "sport": "Esports",
+     "pnl": 452458,
+     "roi": 0.067,
+     "bets": 1902,
+     "winRate": 0.537
+    }
+   ]
+  },
+  {
+   "name": "justwins",
+   "wallet": "0xa2cced8bfae7d645f7f437fb76becf2fcbb70cbc",
+   "spec": "NFL",
+   "sports": [
+    {
+     "sport": "NFL",
+     "pnl": 448657,
+     "roi": 0.321,
+     "bets": 26,
+     "winRate": 0.538
+    }
+   ]
+  },
+  {
+   "name": "Woaifacai",
+   "wallet": "0x9b89ef1f344d3e17b37ccdff3bccf62d04f04244",
+   "spec": "Soccer · NBA",
+   "sports": [
+    {
+     "sport": "Soccer",
+     "pnl": 419160,
+     "roi": 0.167,
+     "bets": 107,
+     "winRate": 0.551
+    },
+    {
+     "sport": "NBA",
+     "pnl": 307965,
+     "roi": 0.095,
+     "bets": 41,
+     "winRate": 0.512
+    }
+   ]
+  },
+  {
+   "name": "chongchong37",
+   "wallet": "0x2879ded7fe05df00eddbb2fba412a0d30964411a",
+   "spec": "NBA",
+   "sports": [
+    {
+     "sport": "NBA",
+     "pnl": 396668,
+     "roi": 0.384,
+     "bets": 99,
+     "winRate": 0.586
+    }
+   ]
+  },
+  {
+   "name": "SDTrading",
+   "wallet": "0x16bb9951a36fce71e2ef57890b786145e0ba8492",
+   "spec": "MLB",
+   "sports": [
+    {
+     "sport": "MLB",
+     "pnl": 354820,
+     "roi": 0.04,
+     "bets": 897,
+     "winRate": 0.523
+    }
+   ]
+  },
+  {
+   "name": "CUTJALENHURTS",
+   "wallet": "0xf68a281980f8c13828e84e147e3822381d6e5b1b",
+   "spec": "MLB · NHL",
+   "sports": [
+    {
+     "sport": "MLB",
+     "pnl": 354191,
+     "roi": 0.397,
+     "bets": 167,
+     "winRate": 0.599
+    },
+    {
+     "sport": "NHL",
+     "pnl": 56064,
+     "roi": 0.223,
+     "bets": 89,
+     "winRate": 0.539
+    }
+   ]
+  },
+  {
+   "name": "01258787xy48487484545122",
+   "wallet": "0x5bfe9469c7c4035325024c846bc530c9d29e3258",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 348254,
+     "roi": 0.042,
+     "bets": 613,
+     "winRate": 0.563
+    }
+   ]
+  },
+  {
+   "name": "takeormake",
+   "wallet": "0xa38a455bbdd4b68486548b7e19da99903f4f821d",
+   "spec": "NBA",
+   "sports": [
+    {
+     "sport": "NBA",
+     "pnl": 326274,
+     "roi": 0.039,
+     "bets": 5178,
+     "winRate": 0.485
+    }
+   ]
+  },
+  {
+   "name": "BrotherObama",
+   "wallet": "0x8a8685a792c184e5c2ee8c7d4d4baba7c2c94998",
+   "spec": "NHL",
+   "sports": [
+    {
+     "sport": "NHL",
+     "pnl": 325353,
+     "roi": 0.488,
+     "bets": 30,
+     "winRate": 0.7
+    }
+   ]
+  },
+  {
+   "name": "Multicoloured-Serf",
+   "wallet": "0x958bdb8aa30b8e5bd1fe4ee071f309c84e97f826",
+   "spec": "Soccer",
+   "sports": [
+    {
+     "sport": "Soccer",
+     "pnl": 314958,
+     "roi": 0.447,
+     "bets": 134,
+     "winRate": 0.455
+    }
+   ]
+  },
+  {
+   "name": "0xd4aa…2814",
+   "wallet": "0x709e8dcb133555794decc598e07f2c923b8366f5",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 282005,
+     "roi": 0.203,
+     "bets": 24,
+     "winRate": 0.417
+    }
+   ]
+  },
+  {
+   "name": "jtwyslljy",
+   "wallet": "0x9cb990f1862568a63d8601efeebe0304225c32f2",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 215327,
+     "roi": 0.047,
+     "bets": 842,
+     "winRate": 0.462
+    }
+   ]
+  },
+  {
+   "name": "TRCM",
+   "wallet": "0x42c99f38d2b951b0dc8e8bd5371fa80c9dd19623",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 161775,
+     "roi": 0.032,
+     "bets": 5892,
+     "winRate": 0.518
+    }
+   ]
+  },
+  {
+   "name": "ferrariChampions2026",
+   "wallet": "0xfe787d2da716d60e8acff57fb87eb13cd4d10319",
+   "spec": "NHL",
+   "sports": [
+    {
+     "sport": "NHL",
+     "pnl": 145576,
+     "roi": 0.103,
+     "bets": 339,
+     "winRate": 0.46
+    }
+   ]
+  },
+  {
+   "name": "tradecraft",
+   "wallet": "0xde9f7f4e77a1595623ceb58e469f776257ccd43c",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 124377,
+     "roi": 0.083,
+     "bets": 2436,
+     "winRate": 0.528
+    }
+   ]
+  },
+  {
+   "name": "timezonewarrior",
+   "wallet": "0x8f8c0eb3c2450ae709c2369bb61dd1b049e9e275",
+   "spec": "UFC",
+   "sports": [
+    {
+     "sport": "UFC",
+     "pnl": 118698,
+     "roi": 0.229,
+     "bets": 53,
+     "winRate": 0.509
+    }
+   ]
+  },
+  {
+   "name": "shark142",
+   "wallet": "0x2759769cd371bee44ec5bfc5e72c7f1f092b2b38",
+   "spec": "UFC",
+   "sports": [
+    {
+     "sport": "UFC",
+     "pnl": 104492,
+     "roi": 0.398,
+     "bets": 16,
+     "winRate": 0.5
+    }
+   ]
+  },
+  {
+   "name": "yabanci",
+   "wallet": "0x285faa3e3d1465cf3ff1bff1e1d14891f5b8495f",
+   "spec": "NHL",
+   "sports": [
+    {
+     "sport": "NHL",
+     "pnl": 101485,
+     "roi": 0.278,
+     "bets": 25,
+     "winRate": 0.44
+    }
+   ]
+  },
+  {
+   "name": "ic4cream",
+   "wallet": "0x27f738fe203827445690339104aae35b20bc44b0",
+   "spec": "UFC",
+   "sports": [
+    {
+     "sport": "UFC",
+     "pnl": 98714,
+     "roi": 0.831,
+     "bets": 53,
+     "winRate": 0.377
+    }
+   ]
+  },
+  {
+   "name": "Painfulvoid",
+   "wallet": "0xd6966eb1ae7b52320ba7ab1016680198c9e08a49",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 97663,
+     "roi": 0.401,
+     "bets": 32,
+     "winRate": 0.625
+    }
+   ]
+  },
+  {
+   "name": "UpTheBlues",
+   "wallet": "0x2a69660046d7acc4ab204d7cc5ba78b0776cd2f7",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 85405,
+     "roi": 0.108,
+     "bets": 216,
+     "winRate": 0.412
+    }
+   ]
+  },
+  {
+   "name": "swisstony",
+   "wallet": "0x204f72f35326db932158cba6adff0b9a1da95e14",
+   "spec": "Tennis",
+   "sports": [
+    {
+     "sport": "Tennis",
+     "pnl": 68202,
+     "roi": 0.049,
+     "bets": 504,
+     "winRate": 0.512
+    }
+   ]
+  },
+  {
+   "name": "sts22",
+   "wallet": "0x6b123a3056bdfa9a6ab33f884e735deeb18ed642",
+   "spec": "UFC",
+   "sports": [
+    {
+     "sport": "UFC",
+     "pnl": 58964,
+     "roi": 0.077,
+     "bets": 117,
+     "winRate": 0.726
+    }
+   ]
+  },
+  {
+   "name": "para-Vision",
+   "wallet": "0x676c1bb692c76b57b06f1b93817515acfa5ce139",
+   "spec": "NHL",
+   "sports": [
+    {
+     "sport": "NHL",
+     "pnl": 54592,
+     "roi": 0.115,
+     "bets": 109,
+     "winRate": 0.486
+    }
+   ]
+  },
+  {
+   "name": "0x3mf3…2fxd",
+   "wallet": "0x3a55b0c45449b955e43ec10734bd988bb5d1394e",
+   "spec": "UFC",
+   "sports": [
+    {
+     "sport": "UFC",
+     "pnl": 41733,
+     "roi": 0.269,
+     "bets": 69,
+     "winRate": 0.768
+    }
+   ]
+  },
+  {
+   "name": "tennischamp",
+   "wallet": "0x8bfee7aeca33003fe9d7398d5143dc7866542d74",
+   "spec": "UFC",
+   "sports": [
+    {
+     "sport": "UFC",
+     "pnl": 40332,
+     "roi": 0.099,
+     "bets": 67,
+     "winRate": 0.761
+    }
+   ]
+  },
+  {
+   "name": "3648393489047",
+   "wallet": "0x67ac9e1ad7d7e74ef0215d14fc8edb538e4fedf1",
+   "spec": "UFC",
+   "sports": [
+    {
+     "sport": "UFC",
+     "pnl": 36041,
+     "roi": 0.063,
+     "bets": 65,
+     "winRate": 0.723
+    }
+   ]
+  }
+ ]
+}
