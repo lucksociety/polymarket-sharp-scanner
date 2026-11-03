@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "predictions",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-02",
+  "account_id": "e00392fc51f4378b29ccadec823e0c49",
+  "workers_dev": true,
+  "observability": {
+    "enabled": false
+  },
+  "vars": {
+    "DISCORD_APPLICATION_ID": "1567025859146031144",
+    "DISCORD_PUBLIC_KEY": "9acb5630c6c442a2f23f554714d0a9324d17c7171f2b73f69f9c3fec25dca968",
+    "HISTORY_MAX_PAGES": "30",
+    "ALLOWED_GUILD_IDS": "780172495268610059"
+  },
+  "workflows": [
+    {
+      "name": "polysharp-jobs",
+      "binding": "SCANS",
+      "class_name": "PolysharpWorkflow",
+      "script_name": "polysharp"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "6107f4085f604d5d988858e1b750a13e"
+    }
+  ],
+  "preview_urls": false
+}

@@ -84,7 +84,7 @@ export async function editReply(job,payload,fetcher=fetch){
  const r=await fetcher(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
  if(!r.ok){await r.body?.cancel();throw Error('Discord response HTTP '+r.status);}await r.body?.cancel();return {delivered:true};
 }
-export async function register(token,fetcher=fetch,definition=command){
- const r=await fetcher(`https://discord.com/api/v10/applications/${APPLICATION_ID}/commands`,{method:'POST',headers:{Authorization:'Bot '+token,'Content-Type':'application/json'},body:JSON.stringify(definition),signal:AbortSignal.timeout(20000)});
+export async function register(token,fetcher=fetch,definition=command,applicationId=APPLICATION_ID){
+ const r=await fetcher(`https://discord.com/api/v10/applications/${applicationId}/commands`,{method:'POST',headers:{Authorization:'Bot '+token,'Content-Type':'application/json'},body:JSON.stringify(definition),signal:AbortSignal.timeout(20000)});
  if(!r.ok){await r.body?.cancel();throw Error('Command registration HTTP '+r.status);}const result=await r.json();return {id:result.id,name:result.name,application_id:result.application_id};
 }
