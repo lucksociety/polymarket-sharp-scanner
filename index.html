@@ -468,6 +468,20 @@ async function fetchEvents(slugs){
   return map;
 }
 
+// After each successful SCAN, ask the /polysharp Worker to post the top 10 conviction bets to the Discord channel.
+// The Worker runs its own fresh scan with the same roster and ranking, and allows one dashboard post per 3 minutes.
+const POLYSHARP_RELAY = "https://polysharp.dreiss324.workers.dev/scan";
+async function sendTopTenToDiscord(){
+  const sub = document.querySelector("#scanSub"), base = sub.textContent;
+  try{
+    const r = await fetch(POLYSHARP_RELAY, { method:"POST" });
+    const j = await r.json().catch(()=>({}));
+    sub.textContent = base + (r.status===202 ? " ☘ Top 10 is on its way to Discord (a few minutes)."
+      : r.status===429 ? ` Discord already got a top 10 in the last few minutes (next in ${Math.max(1,Math.ceil((j.cooldown||60)/60))} min).`
+      : r.status===503 ? " Discord posting isn't configured yet."
+      : " Couldn't reach the Discord relay.");
+  }catch(e){ sub.textContent = base + " Couldn't reach the Discord relay."; }
+}
 async function scan(){
   STATE.warnings=[]; STATE.activity={}; STATE.complete=false;
   try {
@@ -526,6 +540,7 @@ async function scan(){
   btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "SCAN";
   setTimeout(()=>prog.classList.remove("on"), 600);
   render();
+  sendTopTenToDiscord();
   } catch(e) { STATE.warnings.push(e.message); document.querySelector('#scanSub').textContent='Scan failed: '+e.message; }
   finally { const btn=document.querySelector('#scanBtn'); btn.disabled=false;btn.classList.remove('busy');btn.textContent='SCAN'; if(typeof EdgeUI!=='undefined')EdgeUI.afterScan(); }
 }
