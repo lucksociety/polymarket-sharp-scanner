@@ -1,0 +1,14 @@
+{
+  "name": "luck-society-polysharp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "register": "node register.mjs"
+  },
+  "devDependencies": {"wrangler": "4.156.2"},
+  "engines": {"node": ">=22"}
+}
