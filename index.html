@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23d9a627'/%3E%3Cg fill='%231c8f3f'%3E%3Ccircle cx='24' cy='24' r='9'/%3E%3Ccircle cx='40' cy='24' r='9'/%3E%3Ccircle cx='24' cy='40' r='9'/%3E%3Ccircle cx='40' cy='40' r='9'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Limelight&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#07080a; --bg2:#0d0f12; --card:#111418; --card2:#161a1f; --line:#232830; --line2:#2e343d;
@@ -163,6 +163,7 @@ footer a{color:var(--gold)}
 .hidden{display:none!important}
 
 @media (max-width:760px){
+  .controls{position:static}
   .stats{grid-template-columns:repeat(2,1fr)}
   .scan{font-size:24px;padding:16px 40px 16px 48px}
   td.mkt{display:none} th.mkt{display:none}
@@ -172,7 +173,7 @@ footer a{color:var(--gold)}
   .field input[type=text]{width:130px}
 }
 
-/* ---------- v2: day sections + conviction ---------- */
+/* ---------- v2: day sections + open cost share ---------- */
 .day{margin-top:18px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0e1114,#0a0c0f);overflow:hidden}
 .day > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;user-select:none}
 .day > summary::-webkit-details-marker{display:none}
@@ -226,38 +227,33 @@ footer a{color:var(--gold)}
   .ev .time{min-width:54px}
 }
 </style>
+<link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
 
-<header class="hero">
-  <svg class="skyline" viewBox="0 0 1200 150" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3b23c" stop-opacity=".55"/><stop offset="1" stop-color="#e3b23c" stop-opacity="0"/></linearGradient></defs>
-    <path fill="url(#sk)" d="M0 150V112h40V96h22v16h18V70h26v42h20V88h14V60l12-14 12 14v28h18v24h30V84h24V50h8V30h10v20h8v62h26V92h30v20h22V76h18V40l18-24 18 24v72h24V98h28v14h20V64h34v48h18V86h26v26h22V52h10V36h14v16h10v60h30V90h20v22h26V72h22v40h24V58l16-18 16 18v54h20V94h30v18h22V80h28v32h18V66h12V48h16v64h26V96h24v16h30V74h26v38h20V88h22v24h34V60h24v52h18V100h30v12h26V82h20v30h40v38z"/>
-  </svg>
+<nav class="topbar" aria-label="Main navigation"><div class="wrap nav-inner">
+  <a class="wordmark" href="#top" aria-label="Luck Society home"><svg class="brand-coin" viewBox="29 221 248 245" aria-hidden="true"><image href="assets/luck-society-reference.png" width="702" height="580"/></svg><span>LUCK <b>SOCIETY</b></span></a>
+  <div class="nav-links"><a href="#listTitle">The board</a><a href="#edgePanel">Edge screener</a><a href="#paperJournal">Paper journal</a></div>
+  <span class="data-badge"><i></i> POLYMARKET DATA</span>
+</div></nav>
+<header class="hero" id="top">
+  <div class="hero-art" aria-hidden="true"><svg viewBox="275 0 427 350" preserveAspectRatio="xMaxYMid meet"><defs><clipPath id="heroArtCrop"><rect x="275" y="0" width="427" height="350"/></clipPath></defs><image clip-path="url(#heroArtCrop)" href="assets/luck-society-reference.png" width="702" height="580"/></svg></div>
+  <div class="hero-shade"></div>
   <div class="hero-inner wrap">
-    <svg class="coin" viewBox="0 0 100 100" aria-hidden="true">
-      <defs>
-        <radialGradient id="cg" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff2bf"/><stop offset=".45" stop-color="#f0c24b"/><stop offset=".85" stop-color="#b17a14"/><stop offset="1" stop-color="#6e4b0a"/></radialGradient>
-        <radialGradient id="lg" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#5fe596"/><stop offset=".6" stop-color="#1c9a45"/><stop offset="1" stop-color="#0d5c27"/></radialGradient>
-      </defs>
-      <circle cx="50" cy="50" r="48" fill="url(#cg)"/>
-      <circle cx="50" cy="50" r="41" fill="none" stroke="#8a5f0e" stroke-width="1.5" opacity=".7"/>
-      <g fill="url(#lg)" stroke="#0b4a1f" stroke-width="1">
-        <ellipse cx="38" cy="38" rx="11" ry="11"/><ellipse cx="62" cy="38" rx="11" ry="11"/><ellipse cx="38" cy="62" rx="11" ry="11"/><ellipse cx="62" cy="62" rx="11" ry="11"/>
-      </g>
-      <path d="M50 50 Q58 72 66 82" stroke="#0d5c27" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-      <circle cx="50" cy="50" r="5" fill="#1c9a45"/>
-    </svg>
-    <h1>LUCK SOCIETY</h1>
-    <div class="tag">Sharp Money <b>Scanner</b> · Polymarket</div>
-    <div class="deco-rule"><span></span>☘<span></span></div>
-    <button class="scan" id="scanBtn">SCAN</button>
-    <div class="progress" id="prog"><i></i></div>
-    <div class="scan-sub" id="scanSub">Pulls every open bet from the top Polymarket sports &amp; esports traders.</div>
+    <div class="hero-copy"><div class="eyebrow">THE SHARP MONEY DESK <span>EST. 2026</span></div>
+      <div class="hero-brand"><svg class="brand-coin" viewBox="29 221 248 245" aria-hidden="true"><image href="assets/luck-society-reference.png" width="702" height="580"/></svg><h1>LUCK<br><span>SOCIETY</span></h1></div>
+      <p class="hero-caption">Follow the money. <br><strong>Find your edge.</strong></p>
+      <p class="hero-description">Sports intelligence from Polymarket’s sharpest wallets.<br>One board. Every position. A clearer view.</p>
+      <div class="scan-line"><button class="scan" id="scanBtn">SCAN</button><span class="scan-hint">Read the market.<br>Make your own call.</span></div>
+      <div class="progress" id="prog"><i></i></div>
+      <div class="scan-sub" id="scanSub" role="status" aria-live="polite">Scan the tracked sports &amp; esports wallets to get started.</div>
+    </div>
   </div>
+  <div class="hero-bottom wrap"><span>SPORTS &amp; ESPORTS</span><span>PUBLIC ON-CHAIN POSITIONS</span><span>INDEPENDENT THINKING. SHARP SIGNALS.</span></div>
 </header>
 
 <main class="wrap">
+  <div class="desk-heading"><div><span class="eyebrow">THE MARKET, IN FOCUS</span><h2>Your daily advantage.</h2></div><span class="board-caption">Current holdings. Clear context.</span></div>
   <div class="stats" id="stats">
     <div class="stat"><div class="k">Traders tracked</div><div class="v gold" id="sTraders">—</div></div>
     <div class="stat"><div class="k">Bets shown</div><div class="v" id="sBets">—</div></div>
@@ -270,21 +266,21 @@ footer a{color:var(--gold)}
     <div class="day-body"><div class="roster" id="roster"></div></div>
   </details>
 
-  <div class="controls" id="controls">
+  <div class="controls" id="controls"><div class="filter-heading"><span>01 <b>Explore the board</b></span><span>Filter the signal.</span></div>
     <div class="tabs" id="tabs"></div>
     <div class="row2">
       <div class="seg" id="viewSeg"><button data-v="day" class="on">By day</button><button data-v="trader">By trader</button></div>
       <label class="field">Sort games
         <select id="sort">
           <option value="start">Start time</option>
-          <option value="conv">Top conviction</option>
+          <option value="conv">Top open cost share</option>
           <option value="value">Biggest money</option>
           <option value="traders">Most sharps</option>
         </select>
       </label>
-      <label class="field">Conviction
+      <label class="field">Open cost share
         <select id="minConv">
-          <option value="0">Any</option><option value="0.01" selected>1%+ of book</option><option value="0.025">2.5%+</option>
+          <option value="0">Any</option><option value="0.01">1%+ of cost book</option><option value="0.025">2.5%+</option><option value="0.04" selected>4%+</option>
           <option value="0.05">5%+</option><option value="0.1">10%+</option>
         </select>
       </label>
@@ -294,9 +290,9 @@ footer a{color:var(--gold)}
           <option value="10000">10K</option><option value="50000">50K</option>
         </select>
       </label>
-      <label class="chk" title="Hide bets where the same trader holds both sides of a market — usually market-making, not a pick"><input type="checkbox" id="hideHedge" checked> Hide hedges</label>
+      <label class="chk" title="Hide fully paired positions; partial hedges retain only unmatched shares in open cost share"><input type="checkbox" id="hideHedge" checked> Hide fully paired</label>
       <label class="chk"><input type="checkbox" id="showNon"> Non-sports</label>
-      <label class="chk" title="Also scan whoever is topping this month's Sports & Esports leaderboards"><input type="checkbox" id="hot"> + Hot hands</label>
+      <label class="chk" title="Also scan whoever is topping this month's Sports & Esports leaderboards"><input type="checkbox" id="hot" checked> + Hot hands</label>
       <span class="spacer"></span>
       <label class="field"><input type="text" id="q" placeholder="Search team, market, trader…"></label>
     </div>
@@ -304,105 +300,58 @@ footer a{color:var(--gold)}
   </div>
 
   <section id="playsSec" class="hidden">
-    <div class="sec-h"><h2>Biggest Conviction Plays</h2><p>Upcoming games · largest share of each trader's open book</p></div>
+    <div class="sec-h"><h2>Largest Directional Positions</h2><p>Upcoming games · largest net share of each trader's open entry cost</p></div>
     <div class="plays" id="plays"></div>
-    <div class="legend">Conviction = bet value ÷ trader's total open book (accounts under $25K capped at Med).
+    <div class="legend">Open cost share = unmatched entry cost ÷ total open entry cost. Excludes idle cash and external hedges. Accounts under $25K of open cost capped at Med.
       <span class="tier max">🔥 Max</span> 10%+ <span class="tier high">High</span> 4–10% <span class="tier med">Med</span> 1–4% <span class="tier low">Low</span> &lt;1%</div>
   </section>
 
   <section id="consSec" class="hidden">
-    <div class="sec-h"><h2>Sharp Consensus</h2><p>Same side, 2+ tracked traders</p></div>
+    <div class="sec-h"><h2>Tracked Agreement</h2><p>Full roster support and opposition · not a probability estimate</p></div>
     <div class="consensus" id="consensus"></div>
   </section>
 
   <section>
     <div class="sec-h"><h2 id="listTitle">Open Bets</h2><p id="listSub"></p></div>
-    <div id="list"><div class="empty"><div class="big">Feeling lucky?</div>Hit <b>SCAN</b> to pull every open position live from Polymarket.</div></div>
+    <div id="list"><div class="empty"><svg class="brand-coin" viewBox="29 221 248 245" aria-hidden="true"><image href="assets/luck-society-reference.png" width="702" height="580"/></svg><div class="eyebrow">YOUR NEXT READ STARTS HERE</div><div class="big">The board is waiting.</div><p>Scan the roster to see current positions,<br>sharp agreement, and the bets behind the numbers.</p><a class="empty-link" href="#top">BACK TO SCAN ↗</a></div></div>
   </section>
 
   <footer>
-    Live data from Polymarket's public data API · prices in ¢ = implied probability · "open book" = value of a trader's open positions (idle cash isn't public)<br>
+    Live public API data · marks are not executable prices · open cost share excludes idle cash and external hedges<br>
     Following other traders isn't a strategy on its own — big P&amp;L can come from market-making or one lucky hit. Bet responsibly. ☘
   </footer>
 </main>
 
+<script src="engine.js"></script>
 <script>
 /* ============ CONFIG: the roster ============
    spec = what they're known for (from leaderboard big wins). Add/remove traders freely. */
-let CORE = [   // fallback only; the live roster is roster.json (shared with the Discord relay)
-  { name:"BreakTheBank", wallet:"0xf0318c32136c2db7fec88b84869aee6a1106c80c", spec:"NFL · NBA · +$8.2M/120d" },
-  { name:"0x99a0…415f", wallet:"0x6e2c0e9474af7d720e5aba2a5b0bb6f723b7787c", spec:"Esports · +$1.5M/120d" },
-  { name:"0xd967…d140", wallet:"0xd570e634aeb745d6501566dba5f81a555cc7e4f8", spec:"Esports · +$1.2M/120d" },
-  { name:"0x2c33…0563", wallet:"0x2c335066fe58fe9237c3d3dc7b275c2a034a0563", spec:"NBA · UFC · +$1.2M/120d" },
-  { name:"Mooseborzoiii", wallet:"0x57a85952044f2c8e4d31b475aab6987d2f98ebc2", spec:"Esports · +$1.2M/120d" },
-  { name:"0xBc43…96d3", wallet:"0xbc43c8bfbc4d77c2fc9011adad38ba43b88996d3", spec:"NFL · +$1.2M/120d" },
-  { name:"mentionmarket", wallet:"0xc3acf5878a03523d09a3ac859943445d7baeb964", spec:"MLB · +$1.0M/120d" },
-  { name:"ndb1", wallet:"0xfea31bc088000ff909be1dfd8d0e3f2c7ef2d227", spec:"Soccer · +$1.0M/120d" },
-  { name:"Diabolical-Prize", wallet:"0x7c37b52eb226bcb9411375ec48b0169663fb6aeb", spec:"NFL · +$986K/120d" },
-  { name:"WTSA", wallet:"0x04d5524a0a5af2eca6e39e03defc261d42fe66d8", spec:"Soccer · +$937K/120d" },
-  { name:"Talvez10", wallet:"0xa71093cafc0c099b4ccab24c3cb8018d817923c4", spec:"MLB · NHL · +$898K/120d" },
-  { name:"Sassy-Bucket", wallet:"0x4bff30af91642dc7d2b19a8664378fe55c45fc26", spec:"NFL · +$888K/120d" },
-  { name:"theowalcott", wallet:"0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa", spec:"Soccer · +$883K/120d" },
-  { name:"mooseborzoii", wallet:"0x1f3a646ce5cbe2c70270e7a46161d89b7c7b895d", spec:"NHL · Soccer · +$823K/120d" },
-  { name:"monkeymashingkeyboard", wallet:"0x684baa57c338c2549aec0aa3f034f695d72a8409", spec:"NBA · MLB · +$776K/120d" },
-  { name:"gmpm2", wallet:"0x67542c3219b37fd1610aad290676ff91cdbfe3bc", spec:"NFL · +$760K/120d" },
-  { name:"Jsram", wallet:"0x83720820a8aa6c3f20ad71850e7a1a17d16c5223", spec:"Soccer · +$749K/120d" },
-  { name:"keeptheblueflagflyinghigh", wallet:"0x0d6a1ada6d7ff785ab4b7263d9ce8e2baa85aa98", spec:"NBA · NHL · +$743K/120d" },
-  { name:"ethanaz", wallet:"0xf28e42d20e4826f2b10a24bc952001697947cab2", spec:"MLB · +$730K/120d" },
-  { name:"Sunshine.Smile", wallet:"0xd3b034d7bfb2473fb252d0414646d9786bac329e", spec:"Esports · +$656K/120d" },
-  { name:"0xC9BF…255F", wallet:"0xc9bfc7986767173b4f1c3fc9b2c6b255fc7381c0", spec:"Esports · +$643K/120d" },
-  { name:"Elaran1993", wallet:"0xb7271c112cbd83eb4c1ef1b554ff963604ae2a9d", spec:"NFL · +$593K/120d" },
-  { name:"0xf3ce7f", wallet:"0xf3ce7f04dde4f8c5aed19a20e5ecd8520e5ca57a", spec:"Esports · +$566K/120d" },
-  { name:"Kch-Temp", wallet:"0x924379a79c64b77ad5816ad362122a5f6228658e", spec:"NFL · +$521K/120d" },
-  { name:"NS13", wallet:"0x1610db79f753a80207e1d66716be9e91e627ae49", spec:"MLB · +$503K/120d" },
-  { name:"S-Works", wallet:"0xee00ba338c59557141789b127927a55f5cc5cea1", spec:"Esports · +$485K/120d" },
-  { name:"0xb4F9…c9A7", wallet:"0xb4f978be63cdf75554b0b46a4262a6db597cc9a7", spec:"Soccer · +$475K/120d" },
-  { name:"jakepaulthegoat2008", wallet:"0x6ac5bb06a9eb05641fd5e82640268b92f3ab4b6e", spec:"NBA · MLB · +$466K/120d" },
-  { name:"johnbaster", wallet:"0x31864feb9d25dee93728c6225ba891530967e9ca", spec:"Esports · +$452K/120d" },
-  { name:"justwins", wallet:"0xa2cced8bfae7d645f7f437fb76becf2fcbb70cbc", spec:"NFL · +$449K/120d" },
-  { name:"Woaifacai", wallet:"0x9b89ef1f344d3e17b37ccdff3bccf62d04f04244", spec:"Soccer · NBA · +$419K/120d" },
-  { name:"chongchong37", wallet:"0x2879ded7fe05df00eddbb2fba412a0d30964411a", spec:"NBA · +$397K/120d" },
-  { name:"SDTrading", wallet:"0x16bb9951a36fce71e2ef57890b786145e0ba8492", spec:"MLB · +$355K/120d" },
-  { name:"CUTJALENHURTS", wallet:"0xf68a281980f8c13828e84e147e3822381d6e5b1b", spec:"MLB · NHL · +$354K/120d" },
-  { name:"01258787xy48487484545122", wallet:"0x5bfe9469c7c4035325024c846bc530c9d29e3258", spec:"Tennis · +$348K/120d" },
-  { name:"takeormake", wallet:"0xa38a455bbdd4b68486548b7e19da99903f4f821d", spec:"NBA · +$326K/120d" },
-  { name:"BrotherObama", wallet:"0x8a8685a792c184e5c2ee8c7d4d4baba7c2c94998", spec:"NHL · +$325K/120d" },
-  { name:"Multicoloured-Serf", wallet:"0x958bdb8aa30b8e5bd1fe4ee071f309c84e97f826", spec:"Soccer · +$315K/120d" },
-  { name:"0xd4aa…2814", wallet:"0x709e8dcb133555794decc598e07f2c923b8366f5", spec:"Tennis · +$282K/120d" },
-  { name:"jtwyslljy", wallet:"0x9cb990f1862568a63d8601efeebe0304225c32f2", spec:"Tennis · +$215K/120d" },
-  { name:"TRCM", wallet:"0x42c99f38d2b951b0dc8e8bd5371fa80c9dd19623", spec:"Tennis · +$162K/120d" },
-  { name:"ferrariChampions2026", wallet:"0xfe787d2da716d60e8acff57fb87eb13cd4d10319", spec:"NHL · +$146K/120d" },
-  { name:"tradecraft", wallet:"0xde9f7f4e77a1595623ceb58e469f776257ccd43c", spec:"Tennis · +$124K/120d" },
-  { name:"timezonewarrior", wallet:"0x8f8c0eb3c2450ae709c2369bb61dd1b049e9e275", spec:"UFC · +$119K/120d" },
-  { name:"shark142", wallet:"0x2759769cd371bee44ec5bfc5e72c7f1f092b2b38", spec:"UFC · +$104K/120d" },
-  { name:"yabanci", wallet:"0x285faa3e3d1465cf3ff1bff1e1d14891f5b8495f", spec:"NHL · +$101K/120d" },
-  { name:"ic4cream", wallet:"0x27f738fe203827445690339104aae35b20bc44b0", spec:"UFC · +$99K/120d" },
-  { name:"Painfulvoid", wallet:"0xd6966eb1ae7b52320ba7ab1016680198c9e08a49", spec:"Tennis · +$98K/120d" },
-  { name:"UpTheBlues", wallet:"0x2a69660046d7acc4ab204d7cc5ba78b0776cd2f7", spec:"Tennis · +$85K/120d" },
-  { name:"swisstony", wallet:"0x204f72f35326db932158cba6adff0b9a1da95e14", spec:"Tennis · +$68K/120d" },
-  { name:"sts22", wallet:"0x6b123a3056bdfa9a6ab33f884e735deeb18ed642", spec:"UFC · +$59K/120d" },
-  { name:"para-Vision", wallet:"0x676c1bb692c76b57b06f1b93817515acfa5ce139", spec:"NHL · +$55K/120d" },
-  { name:"0x3mf3…2fxd", wallet:"0x3a55b0c45449b955e43ec10734bd988bb5d1394e", spec:"UFC · +$42K/120d" },
-  { name:"tennischamp", wallet:"0x8bfee7aeca33003fe9d7398d5143dc7866542d74", spec:"UFC · +$40K/120d" },
-  { name:"3648393489047", wallet:"0x67ac9e1ad7d7e74ef0215d14fc8edb538e4fedf1", spec:"UFC · +$36K/120d" }
+const CORE = [
+  { name:"BreakTheBank",     wallet:"0xf0318c32136c2db7fec88b84869aee6a1106c80c", spec:"NFL · NBA" },
+  { name:"googleplay",       wallet:"0xe9b710551dd82a44e79203c2394a2b10163ace7b", spec:"NBA" },
+  { name:"mooseborzoii",     wallet:"0x1f3a646ce5cbe2c70270e7a46161d89b7c7b895d", spec:"NFL" },
+  { name:"joseph00677",      wallet:"0xcdcccd0f2d86e450d973da415ad2430e5cc7935a", spec:"Soccer" },
+  { name:"beachboy4",        wallet:"0xc2e7800b5af46e6093872b177b7a5e7f0563be51", spec:"Soccer" },
+  { name:"mintblade",        wallet:"0x96cfcb0c30942cfcd1cdf76c7d408794d66b1acb", spec:"Soccer" },
+  { name:"frostrizz",        wallet:"0xbc11a64ab34a03a043fbe80598fa065ee87eeec6", spec:"Soccer" },
+  { name:"sparklingwater123",wallet:"0x664ce9fb97ae1bbd538d7381b2f4e92dab16f49c", spec:"Soccer" },
+  { name:"DEEDDIT",          wallet:"0x09b428f7c2b469786286214aa5c90dd9015f7320", spec:"Soccer" },
+  { name:"fishalive",        wallet:"0xed64a7bf029040aa331abc87902434d815ef217d", spec:"Soccer" },
+  { name:"fengdubiying",     wallet:"0x17db3fcd93ba12d38382a0cade24b200185c5f6d", spec:"LoL" },
+  { name:"Mooseborzoiii",    wallet:"0x57a85952044f2c8e4d31b475aab6987d2f98ebc2", spec:"LoL" },
+  { name:"Diabolical-Prize", wallet:"0x7c37b52eb226bcb9411375ec48b0169663fb6aeb", spec:"LoL · CS" },
+  { name:"bossoskil1",       wallet:"0xa5ea13a81d2b7e8e424b182bdc1db08e756bd96a", spec:"Esports" },
+  { name:"swisstony",        wallet:"0x204f72f35326db932158cba6adff0b9a1da95e14", spec:"All sports" },
+  { name:"RN1",              wallet:"0x2005d16a84ceefa912d4e380cd32e7ff827875ea", spec:"All sports" },
+  { name:"kch123",           wallet:"0x6a72f61820b26b1fe4d956e17b6dc2a1ea3033ee", spec:"All sports" },
+  { name:"HomeRunHazard",    wallet:"0x5268527977f700f9bf9b6d5cd843859e4e70135d", spec:"MLB?" },
 ];
 
 let TRADERS = [...CORE];
-const RELAY_URL = "https://polysharp-discord.dreiss324.workers.dev";   // Cloudflare Worker that posts the top 10 to Discord
-async function postToDiscord(){
-  const sub = $("#scanSub"), base = sub.textContent;
-  try{
-    const r = await fetch(RELAY_URL + "/scan", { method:"POST" });
-    const j = await r.json().catch(()=>({}));
-    sub.textContent = base + (r.status===202 ? " · ☘ Top 10 sent to Discord (arrives in ~1 min)."
-      : r.status===429 ? ` · Discord already got a top 10 recently (next in ${Math.ceil((j.cooldown||60)/60)} min).`
-      : " · Couldn't reach the Discord relay.");
-  }catch(e){ sub.textContent = base + " · Discord relay isn't set up yet."; }
-}
-const DATA = "https://data-api.polymarket.com/v2";
+const DATA = "https://data-api.polymarket.com";
 const GAMMA = "https://gamma-api.polymarket.com";
 const SPORTS = ["NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","LoL","Other sports","Non-sports"];
-const MIN_BOOK = 25000;            // accounts smaller than this can't rank as Max/High conviction
+const MIN_BOOK = 25000;            // accounts smaller than this can't rank as Max/High open cost share
 const LIVE_WINDOW = 3.5*3600e3;   // a game counts as "live" for 3.5h after its start
 
 /* ============ helpers ============ */
@@ -418,7 +367,7 @@ const parseTime = s => { if(!s) return NaN; const t = Date.parse(String(s).repla
 
 async function getJSON(url, tries=3){
   for(let i=0;i<tries;i++){
-    try{ const r = await fetch(url); if(r.status===429){ await sleep(900*(i+1)); continue; } if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); }
+    try{ const r = await fetch(url,{signal:AbortSignal.timeout(20000)}); if((r.status===429||r.status===503)&&i<tries-1){ const delay=Number(r.headers.get("Retry-After")); await sleep(Number.isFinite(delay)&&delay>0?Math.min(delay*1000,30000):900*(i+1)); continue; } if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); }
     catch(e){ if(i===tries-1) throw e; await sleep(500*(i+1)); }
   }
   throw new Error("rate limited");
@@ -447,33 +396,21 @@ const TIER_LABEL = {max:"🔥 Max", high:"High", med:"Med", low:"Low"};
 
 /* ============ state ============ */
 let STATE = { positions:[], status:{}, book:{}, scannedAt:null };
-let UI = { sport:"All", view:"day", sort:"start", minConv:0.01, min:1000, hideHedge:true, showNon:false, hot:false, q:"" };
+let UI = { sport:"All", view:"day", sort:"start", minConv:0.04, min:1000, hideHedge:true, showNon:false, hot:true, q:"" };
 const OPEN = {};   // remembers which day sections / game cards are expanded
 
 /* ============ scan ============ */
-// Polymarket Data API v2 (v1 was retired Nov 2026). Rows are mapped back to the field names the rest of the page uses.
-function fromV2(r){
-  return { conditionId:r.condition_id, asset:r.token_id, outcome:r.outcome, outcomeIndex:r.outcome_index,
-    title:r.title, slug:r.slug, icon:r.icon, eventSlug:r.event_slug, endDate:r.end_date,
-    size:r.current_size, avgPrice:r.avg_price, curPrice:r.current_price, currentValue:r.current_value,
-    initialValue:r.entry_cost_usdc, cashPnl:r.unrealized_pnl, realizedPnl:r.realized_pnl,
-    redeemable:!!r.redeemable, status:r.status };
-}
 async function fetchPositions(t){
-  const all = []; let cursor = null;
-  for(let page=0; page<5; page++){
-    const url = `${DATA}/positions?user=${t.wallet}&status=OPEN&sort_by=CURRENT_VALUE&sort_direction=DESC&limit=1000` + (cursor ? `&cursor=${encodeURIComponent(cursor)}` : "");
-    const res = await getJSON(url);
-    const rows = res?.data || [];
-    all.push(...rows.map(fromV2));
-    cursor = res?.pagination?.next_cursor;
-    if(!cursor || !rows.length) break;
-  }
-  return all;
+  const rows = await SharpEngine.pages(getJSON, `${DATA}/v2/positions?user=${t.wallet}&status=OPEN&limit=500&filter_type=TOKENS&filter_amount=0&sort_by=CURRENT_VALUE`);
+  return rows.map(SharpEngine.position);
 }
 async function fetchBook(t, positions){
-  try{ const v = await getJSON(`${DATA}/value?user=${t.wallet}`); const n = +(v?.data?.value); if(n>0) return n; }catch(e){}
+  try{ const v=await getJSON(`${DATA}/v2/value?user=${t.wallet}`); if(SharpEngine.number(v?.data?.value)) return +v.data.value; }catch(e){ STATE.warnings.push(`${t.name}: portfolio value unavailable; using holdings`); }
   return positions.reduce((a,p)=>a+(p.currentValue||0),0);
+}
+async function fetchActivity(t){
+  const start=Math.floor(Date.now()/1000)-86400;
+  return SharpEngine.pages(getJSON, `${DATA}/v2/activity?user=${t.wallet}&type=TRADE&start=${start}&sort_direction=DESC&limit=1000`,{maxPages:20});
 }
 async function fetchEvents(slugs){
   const map = {};
@@ -485,43 +422,46 @@ async function fetchEvents(slugs){
       for(const e of evs){
         const tags = (e.tags||[]).map(x=>x.slug);
         const gs = (e.markets||[]).map(m=>m.gameStartTime).find(Boolean);
-        map[e.slug] = { sport: classify(tags, e.slug), game: gs ? parseTime(gs) : NaN, end: parseTime(e.endDate), title: e.title, image: e.icon || e.image };
+        map[e.slug] = { markets:e.markets||[], sport: classify(tags, e.slug), game: gs ? parseTime(gs) : NaN, end: parseTime(e.endDate), title: e.title, image: e.icon || e.image };
       }
-    }catch(e){}
+    }catch(e){ STATE.warnings.push("Event metadata request failed: "+e.message); }
   });
   return map;
 }
 
 async function scan(){
+  STATE.warnings=[]; STATE.activity={}; STATE.complete=false;
+  try {
   const btn = $("#scanBtn"), sub = $("#scanSub"), prog = $("#prog"), bar = prog.querySelector("i");
   btn.disabled = true; btn.classList.add("busy"); btn.textContent = "SCANNING"; prog.classList.add("on"); bar.style.width = "3%";
-  try { const r = await fetch("roster.json?v=" + Date.now()); if(r.ok){ const j = await r.json(); if(j.traders?.length) CORE = j.traders; } } catch(e){}
   TRADERS = [...CORE];
   if(UI.hot){
     sub.textContent = "Pulling this month's leaderboard…";
     const known = new Set(CORE.map(t=>t.wallet.toLowerCase()));
     for(const [cat,n,label] of [["SPORTS",25,"Hot · Sports"],["ESPORTS",10,"Hot · Esports"]]){
       try{
-        const lb = (await getJSON(`${DATA}/leaderboard?category=${cat}&time_period=month&sort_by=PNL&limit=${n}`))?.data || [];
-        for(const [i,x] of lb.entries()){ const w=(x.user_id||"").toLowerCase(); if(!w||known.has(w)) continue; known.add(w);
+        const lb = await getJSON(`${DATA}/v2/leaderboard?category=${cat.toLowerCase()}&time_period=month&sort_by=PNL&limit=${n}`);
+        for(const [i,x] of (lb.data||[]).entries()){ const w=(x.user_id||"").toLowerCase(); if(!w||known.has(w)) continue; known.add(w);
           TRADERS.push({ name:shortName(x.user_name) || (w.slice(0,6)+"…"+w.slice(-4)), wallet:w, spec:`${label} #${x.rank||i+1} · ${signed(+x.pnl||0)}/mo`, hot:true }); }
-      }catch(e){}
+      }catch(e){ STATE.warnings.push("Monthly roster unavailable: "+e.message); }
     }
   }
+  const names=new Set();
+  TRADERS=TRADERS.map(t=>{let name=t.name;if(names.has(name))name+=' · '+t.wallet.slice(-6);names.add(name);return {...t,name};});
   STATE.status = {}; STATE.book = {}; TRADERS.forEach(t => STATE.status[t.name] = "load"); renderRoster();
   let done = 0; const total = TRADERS.length + 2;
   const results = await pool(TRADERS, 4, async t => {
     try{
       const raw = await fetchPositions(t);
-      const open = raw.filter(p => !p.redeemable && p.curPrice > 0.002 && p.curPrice < 0.998 && p.currentValue >= 1)
-                      .map(p => ({ ...p, trader:t.name, wallet:t.wallet, spec:t.spec }));
-      STATE.book[t.name] = Math.max(await fetchBook(t, raw), open.reduce((a,p)=>a+p.currentValue,0));
-      // hedge detection: same trader holds both outcomes of one market
-      const byCond = {}; open.forEach(p => (byCond[p.conditionId] ||= []).push(p));
-      Object.values(byCond).forEach(list => { if(new Set(list.map(p=>p.outcomeIndex)).size > 1) list.forEach(p => p.hedged = true); });
+      try { STATE.activity[t.wallet]=await fetchActivity(t); }
+      catch(e) { STATE.activity[t.wallet]=[]; STATE.warnings.push(`${t.name}: activity unavailable (${e.message})`); }
+      const annotated=SharpEngine.exposure(raw.filter(p=>!p.redeemable));
+      const open=annotated.filter(p=>!p.redeemable&&p.curPrice>0.002&&p.curPrice<0.998&&p.currentValue>=1)
+        .map(p=>({...p,trader:t.name,wallet:t.wallet,spec:t.spec,scanAt:Date.now()}));
+      STATE.book[t.name]=Math.max(await fetchBook(t,raw),open.reduce((a,p)=>a+p.currentValue,0));
       STATE.status[t.name] = { ok:true, n:open.length };
       return open;
-    } catch(e){ STATE.status[t.name] = { ok:false, err:e.message }; return []; }
+    } catch(e){ STATE.status[t.name] = { ok:false, err:e.message }; STATE.warnings.push(`${t.name}: positions unavailable (${e.message})`); return []; }
     finally{ done++; bar.style.width = (done/total*100)+"%"; sub.textContent = `Scanned ${done}/${TRADERS.length} traders…`; renderRoster(); }
   });
   const positions = results.flat();
@@ -530,23 +470,25 @@ async function scan(){
   for(const p of positions){
     const ev = events[p.eventSlug];
     p.sport = ev ? ev.sport : classify([], p.eventSlug);
-    p.game = ev ? ev.game : NaN;               // exact game start (games only)
+    const market=ev?.markets?.find(m=>m.conditionId===p.conditionId);
+    p.game = market?.gameStartTime ? parseTime(market.gameStartTime) : NaN;               // exact game start (games only)
     p.isGame = !isNaN(p.game);
     p.end = ev && !isNaN(ev.end) ? ev.end : parseTime(p.endDate);
     p.eventTitle = ev?.title || p.title;
     p.eventImage = ev?.image || p.icon;
     const book = STATE.book[p.trader] || 0;
-    p.conv = book > 0 ? Math.min(1, p.currentValue / book) : 0;
-    p.smallBook = book < MIN_BOOK;
+    p.smallBook = p.costBook < MIN_BOOK;
     p.tier = p.smallBook ? (p.conv>=0.01 ? "med" : "low") : tierOf(p.conv);
   }
   STATE.positions = positions; STATE.scannedAt = new Date();
+  STATE.complete=Object.values(STATE.status).every(s=>s.ok)&&STATE.warnings.length===0;
   bar.style.width = "100%";
   sub.textContent = `Found ${positions.length.toLocaleString()} open positions across ${TRADERS.length} traders.`;
   btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "SCAN";
   setTimeout(()=>prog.classList.remove("on"), 600);
-  postToDiscord();
   render();
+  } catch(e) { STATE.warnings.push(e.message); document.querySelector('#scanSub').textContent='Scan failed: '+e.message; }
+  finally { const btn=document.querySelector('#scanBtn'); btn.disabled=false;btn.classList.remove('busy');btn.textContent='SCAN'; if(typeof EdgeUI!=='undefined')EdgeUI.afterScan(); }
 }
 
 /* ============ filtering ============ */
@@ -557,7 +499,7 @@ function filtered(ignoreSport=false){
     if(!ignoreSport && UI.sport!=="All" && p.sport!==UI.sport) return false;
     if(p.currentValue < UI.min) return false;
     if(p.conv < UI.minConv) return false;
-    if(UI.hideHedge && p.hedged) return false;
+    if(UI.hideHedge && !(p.netShares>0)) return false;
     if(q && !(`${p.title} ${p.eventTitle} ${p.trader} ${p.outcome}`.toLowerCase().includes(q))) return false;
     return true;
   });
@@ -616,45 +558,40 @@ function renderStats(rows){
   $("#shown").innerHTML = `Showing <b>${rows.length.toLocaleString()}</b> of ${total.toLocaleString()} open positions · ${(total-rows.length).toLocaleString()} hidden by filters`;
 }
 function convCell(p){
-  return `<div class="conv" ${p.smallBook?`title="Small account (open book under ${money(MIN_BOOK)}) — % is less meaningful"`:""}><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span><span class="bar"><i class="${p.tier}" style="width:${Math.max(4,Math.min(100,p.conv/0.2*100))}%"></i></span><span class="pc">${pct(p.conv)}</span></div>`;
+  return `<div class="conv" ${p.smallBook?`title="Small account (open entry cost under ${money(MIN_BOOK)}) — % is less meaningful"`:""}><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span><span class="bar"><i class="${p.tier}" style="width:${Math.max(4,Math.min(100,p.conv/0.2*100))}%"></i></span><span class="pc">${pct(p.conv)}</span></div>`;
 }
 function outCls(o){ const s=(o||"").toLowerCase(); return s==="yes"?"yes":s==="no"?"no":""; }
 
 function renderPlays(rows){
   const now = Date.now();
-  const best = {};   // one card per trader+market, highest conviction
-  rows.filter(p => p.isGame && p.game > now - LIVE_WINDOW && !p.hedged && !p.smallBook)
-      .forEach(p => { const k=p.trader+"|"+p.conditionId; if(!best[k] || best[k].conv < p.conv) best[k]=p; });
-  const plays = Object.values(best).sort((a,b)=>b.conv-a.conv).slice(0,8);
+  const plays = SharpEngine.topConviction(rows,{now,limit:8,minBook:MIN_BOOK});
   $("#playsSec").classList.toggle("hidden", !plays.length);
   $("#plays").innerHTML = plays.map(p => `
     <a class="play" href="https://polymarket.com/event/${esc(p.eventSlug)}" target="_blank" rel="noopener">
-      <div class="top"><div class="big">${pct(p.conv)}<small>of book</small></div><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span></div>
+      <div class="top"><div class="big">${pct(p.conv)}<small>of open cost</small></div><span class="tier ${p.tier}">${TIER_LABEL[p.tier]}</span></div>
       <div class="pick">${esc(p.outcome)} <span style="color:var(--muted);font-weight:600">@ ${cents(p.curPrice)}</span></div>
       <div class="ttl">${esc(p.title)}</div>
       <div class="ft"><span><b>${esc(p.trader)}</b> · ${money(p.currentValue)}</span><span>${p.game<=now?"🔴 Live":esc(new Date(p.game).toLocaleDateString([], {weekday:"short"}))+" "+timeTxt(p.game)}</span></div>
     </a>`).join("");
 }
 function renderConsensus(rows){
-  const g = {};
-  rows.filter(p=>!p.hedged).forEach(p => { const k = p.conditionId+"|"+p.outcomeIndex; (g[k] ||= {p, list:[]}).list.push(p); });
-  const cons = Object.values(g).map(x => {
-    const tr = [...new Set(x.list.map(p=>p.trader))];
-    return {...x, traders: tr, value: x.list.reduce((a,p)=>a+p.currentValue,0), conv: x.list.reduce((a,p)=>a+p.conv,0)};
-  }).filter(x => x.traders.length >= 2).sort((a,b)=> b.traders.length-a.traders.length || b.conv-a.conv).slice(0,9);
-  $("#consSec").classList.toggle("hidden", !cons.length);
-  $("#consensus").innerHTML = cons.map(x => `
-    <a class="cons" href="https://polymarket.com/event/${esc(x.p.eventSlug)}" target="_blank" rel="noopener">
-      <div class="t">${esc(x.p.title)}</div>
-      <div class="side"><span class="pill">${esc(x.p.outcome)} @ ${cents(x.p.curPrice)}</span><span class="pill gold">${x.traders.length} sharps</span><span class="pill dim">${esc(x.p.sport)}</span></div>
-      <div class="who">${x.list.sort((a,b)=>b.conv-a.conv).map(p=>`<b>${esc(p.trader)}</b> ${pct(p.conv)}`).join(" · ")}</div>
-      <div class="m"><span>${money(x.value)} on it</span><span>${x.p.isGame ? (x.p.game<=Date.now()?"🔴 Live":new Date(x.p.game).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})+" "+timeTxt(x.p.game)) : "Future"}</span></div>
-    </a>`).join("");
+  const g={};
+  STATE.positions.filter(p=>p.netShares>0&&p.outcomeIndex!==999).forEach(p=>{const k=SharpEngine.key(p);(g[k]||={p,list:[]}).list.push(p);});
+  const visible=new Set(rows.map(SharpEngine.key));
+  const cons=Object.values(g).filter(x=>visible.has(SharpEngine.key(x.p))&&new Set(x.list.map(p=>p.wallet)).size>=2)
+    .sort((a,b)=>b.list.length-a.list.length).slice(0,9);
+  document.querySelector('#consSec').classList.toggle('hidden',!cons.length);
+  document.querySelector('#consensus').innerHTML=cons.map(x=>{
+    const opp=STATE.positions.filter(p=>p.conditionId===x.p.conditionId&&p.outcomeIndex!==x.p.outcomeIndex&&p.netShares>0);
+    return `<a class="cons" href="https://polymarket.com/event/${encodeURIComponent(x.p.eventSlug)}" target="_blank" rel="noopener"><div class="t">${esc(x.p.title)}</div>
+      <div class="side"><span class="pill">${esc(x.p.outcome)} · mark ${cents(x.p.curPrice)}</span><span class="pill gold">${new Set(x.list.map(p=>p.wallet)).size} supporters</span><span class="pill dim">${new Set(opp.map(p=>p.wallet)).size} opponents</span></div>
+      <div class="who">Support: ${x.list.map(p=>esc(p.trader)).join(' · ')}<br>Opposition: ${opp.length?opp.map(p=>esc(p.trader)).join(' · '):'None observed'}</div></a>`;
+  }).join('');
 }
 
 function posRow(p){
   return `<tr>
-    <td><a class="trader" href="https://polymarket.com/profile/${p.wallet}" target="_blank" rel="noopener">${esc(p.trader)}</a>${p.hedged?'<span class="hedge" title="Holds both sides of this market">HEDGE</span>':""}</td>
+    <td><a class="trader" href="https://polymarket.com/profile/${p.wallet}" target="_blank" rel="noopener">${esc(p.trader)}</a>${p.hedged?'<span class="hedge" title="Open cost share uses unmatched shares only">PARTIAL HEDGE</span>':""}</td>
     <td class="mkt">${esc(p.title)}</td>
     <td><span class="out ${outCls(p.outcome)}">${esc(p.outcome)}</span></td>
     <td class="num hide-sm">${cents(p.avgPrice)}<span class="arrow">→</span>${cents(p.curPrice)}</td>
@@ -663,7 +600,7 @@ function posRow(p){
   </tr>`;
 }
 function gameCard(x){
-  const id = "g:"+x.slug; const showAll = OPEN[id];
+  const id = "g:"+x.slug+"|"+(x.isGame?x.game:"future"); const showAll = OPEN[id];
   const list = x.list.sort((a,b)=>b.conv-a.conv);
   const shown = showAll ? list : list.slice(0,4);
   const now = Date.now();
@@ -673,16 +610,16 @@ function gameCard(x){
     <div class="ev-h">${time}
       <div class="ti"><a href="https://polymarket.com/event/${esc(x.slug)}" target="_blank" rel="noopener">${esc(x.title)}</a>
         <div class="meta"><span class="pill dim">${esc(x.sport)}</span><span>${x.traders} trader${x.traders>1?"s":""}</span>${!x.isGame && x.end ? `<span>Resolves ${esc(new Date(x.end).toLocaleDateString([], {month:"short", year:"numeric"}))}</span>`:""}</div></div>
-      <div class="tot"><small>Top conviction</small><span class="tier ${tierOf(x.conv)}">${pct(x.conv)}</span><br><span style="color:var(--muted)">${money(x.value)}</span></div>
+      <div class="tot"><small>Top open cost share</small><span class="tier ${x.list.find(p=>p.conv===x.conv)?.tier||"low"}">${pct(x.conv)}</span><br><span style="color:var(--muted)">${money(x.value)}</span></div>
     </div>
-    <table><thead><tr><th>Trader</th><th class="mkt">Market</th><th>Side</th><th class="num hide-sm">Entry → Now</th><th class="num">Value</th><th class="num">% of book</th></tr></thead>
+    <table><thead><tr><th>Trader</th><th class="mkt">Market</th><th>Side</th><th class="num hide-sm">Entry → Mark</th><th class="num">Value</th><th class="num">% of book</th></tr></thead>
     <tbody>${shown.map(posRow).join("")}</tbody></table>
     ${list.length>4 ? `<button class="more" data-toggle="${esc(id)}">${showAll?"Show less":`Show ${list.length-4} more`}</button>`:""}
   </div>`;
 }
 function groupGames(rows){
   const g = {};
-  rows.forEach(p => { const k=p.eventSlug||p.conditionId; (g[k] ||= {slug:p.eventSlug, title:p.eventTitle, img:p.eventImage, sport:p.sport, game:p.game, isGame:p.isGame, end:p.end, list:[]}).list.push(p); });
+  rows.forEach(p => { const k=(p.eventSlug||p.conditionId)+"|"+(p.isGame?p.game:"future"); (g[k] ||= {slug:p.eventSlug, title:p.eventTitle, img:p.eventImage, sport:p.sport, game:p.game, isGame:p.isGame, end:p.end, list:[]}).list.push(p); });
   return Object.values(g).map(x => ({...x, value:x.list.reduce((a,p)=>a+p.currentValue,0), conv:Math.max(...x.list.map(p=>p.conv)), traders:new Set(x.list.map(p=>p.trader)).size}));
 }
 function sortGames(groups){
@@ -716,7 +653,7 @@ function renderByTrader(rows){
   rows.forEach(p => g[p.trader]?.list.push(p));
   const cards = Object.values(g).map(x => ({...x, value:x.list.reduce((a,p)=>a+p.currentValue,0)}))
     .sort((a,b)=>b.list.length && a.list.length ? Math.max(...b.list.map(p=>p.conv))-Math.max(...a.list.map(p=>p.conv)) : b.list.length-a.list.length);
-  $("#listSub").textContent = `${rows.length} positions across ${cards.filter(c=>c.list.length).length} traders · sorted by conviction`;
+  $("#listSub").textContent = `${rows.length} positions across ${cards.filter(c=>c.list.length).length} traders · sorted by open cost share`;
   const when = p => p.isGame ? (p.game<=Date.now()?"🔴 Live":new Date(p.game).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})+" "+timeTxt(p.game)) : "Future";
   return `<div class="traders">` + cards.map(x => {
     const st = STATE.status[x.t.name]; const book = STATE.book[x.t.name];
@@ -741,9 +678,10 @@ function render(){
   if(!STATE.scannedAt) return;
   const rows = filtered();
   renderStats(rows); renderPlays(rows); renderConsensus(rows);
+  if(typeof EdgeUI!=="undefined")EdgeUI.render();
   $("#listTitle").textContent = (UI.sport==="All" ? "Open Bets" : UI.sport + " Bets");
   $("#list").innerHTML = rows.length ? (UI.view==="day" ? renderByDay(rows) : renderByTrader(rows))
-    : `<div class="empty"><div class="big">No action here</div>No open bets match these filters — try a lower conviction or Min $, or another sport.</div>`;
+    : `<div class="empty"><div class="big">No action here</div>No open bets match these filters — try a lower open cost share or Min $, or another sport.</div>`;
 }
 
 /* ============ wiring ============ */
@@ -768,5 +706,8 @@ $("#list").addEventListener("toggle", e => {
 }, true);
 render();
 </script>
+<script src="history.js"></script>
+<script src="edge.js"></script>
 </body>
 </html>
+
