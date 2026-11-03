@@ -51,3 +51,10 @@ test('default Workflow publishes dashboard conviction cards with no historical o
  const w=new h.PolysharpWorkflow();w.env=h.env;const result=await w.run({instanceId:'test-scan',payload:{receivedAt:now,options:validateOptions([])}},h.step);
  assert.equal(result.mode,'conviction');assert.equal(result.published,2);assert.deepEqual(result.top.map(p=>p.wallet),['b','a']);assert.ok(h.created.every(j=>j.params.kind==='wallet'));assert.match(sent.at(-1).embeds[0].fields[1].value,/30.0%/);
 });
+
+test('dashboard-triggered Workflow skips the progress message and sends only the final conviction card',async()=>{
+ const now=Date.now(),p={wallet:'a',trader:'A',conditionId:'market',outcomeIndex:0,outcome:'Yes',title:'Test game',eventSlug:'test',sport:'NHL',isGame:true,game:now+3600000,netShares:10000,costKnown:true,costBook:100000,conv:.25,remainingCost:25000,currentValue:10000,curPrice:.5};
+ const sent=[];const h=harness(async()=>{throw Error('no public calls expected');},undefined,{E,pool,convictionReport,roster:async()=>[{wallet:'a',name:'A'}],collect:async()=>({positions:[p],candidates:[p],scannedWallets:1,complete:true,warnings:[]}),editReply:async(job,payload)=>{sent.push([job.source,payload]);return{delivered:true};}});
+ const w=new h.PolysharpWorkflow();w.env=h.env;const result=await w.run({instanceId:'dash-1',payload:{source:'dashboard',webhook:'https://discord.com/api/webhooks/1/x',receivedAt:now,options:validateOptions([])}},h.step);
+ assert.equal(result.mode,'conviction');assert.equal(sent.length,1);assert.equal(sent[0][0],'dashboard');assert.match(sent[0][1].embeds[0].title,/Highest Conviction/);
+});

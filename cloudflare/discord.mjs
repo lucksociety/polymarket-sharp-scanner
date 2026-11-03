@@ -9,9 +9,30 @@ export async function verifyDiscord(request,body,key=PUBLIC_KEY,now=Date.now()){
 }
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 const ephemeral=content=>json({type:4,data:{content,flags:64,allowed_mentions:{parse:[]}}});
+const DASHBOARD_ORIGIN='https://lucksociety.github.io';
+const DASHBOARD_COOLDOWN_MS=3*60000;
+const cors={'Access-Control-Allow-Origin':DASHBOARD_ORIGIN,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Max-Age':'86400','Vary':'Origin','Cache-Control':'no-store'};
+const corsJson=(body,status=200)=>Response.json(body,{status,headers:cors});
+// Dashboard SCAN button: run the default /polysharp conviction scan and post the top 10 to the channel webhook.
+export async function dashboardScan(request,env,now=Date.now()){
+ if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
+ if(request.method!=='POST')return corsJson({ok:false,error:'Method not allowed'},405);
+ if(request.headers.get('Origin')!==DASHBOARD_ORIGIN)return new Response('Forbidden',{status:403});
+ const webhook=String(env.DASHBOARD_WEBHOOK_URL||'');
+ if(!/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[\w-]+$/.test(webhook))return corsJson({ok:false,error:'Discord channel webhook is not configured'},503);
+ if(!env.SCANS||!env.CACHE)return corsJson({ok:false,error:'Background scanner is not ready'},503);
+ const bucket=Math.floor(now/DASHBOARD_COOLDOWN_MS),id=`dash-${bucket}`;
+ try{
+  await env.SCANS.create({id,params:{source:'dashboard',webhook,receivedAt:now,options:validateOptions([])}});
+  return corsJson({ok:true,queued:true},202);
+ }catch{
+  return corsJson({ok:false,cooldown:Math.ceil(((bucket+1)*DASHBOARD_COOLDOWN_MS-now)/1000)},429);
+ }
+}
 export async function handle(request,env){
  const url=new URL(request.url);
- if(request.method==='GET'&&url.pathname==='/health')return json({ok:true,command:'polysharp',ready:Boolean(env.SCANS&&env.CACHE)});
+ if(request.method==='GET'&&url.pathname==='/health')return json({ok:true,command:'polysharp',ready:Boolean(env.SCANS&&env.CACHE),dashboardRelay:Boolean(env.DASHBOARD_WEBHOOK_URL)});
+ if(url.pathname==='/scan')return dashboardScan(request,env);
  if(request.method!=='POST'||url.pathname!=='/interactions')return new Response('Not found',{status:404});
  if(Number(request.headers.get('Content-Length'))>65536)return new Response('Too large',{status:413});
  const body=await request.text();if(encoder.encode(body).length>65536)return new Response('Too large',{status:413});
@@ -80,6 +101,11 @@ export function predictionsReport(plays,wallets,total,count,warnings){
  return {content:'[Open the Smart Money Scanner](https://lucksociety.github.io/polymarket-smart-money-scanner/)',embeds:[{title:'☘ Luck Society · Smart Money Predictions',color:0xd4b259,description,fields}],allowed_mentions:{parse:[]}};
 }
 export async function editReply(job,payload,fetcher=fetch){
+ if(job.source==='dashboard'){
+  // Dashboard-triggered scans post one new message to the configured channel webhook.
+  const r=await fetcher(job.webhook+'?wait=true',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,content:payload.content||'☘ Triggered from the dashboard SCAN button',allowed_mentions:{parse:[]}}),signal:AbortSignal.timeout(15000)});
+  if(!r.ok){await r.body?.cancel();throw Error('Discord webhook HTTP '+r.status);}await r.body?.cancel();return {delivered:true};
+ }
  const url=`https://discord.com/api/v10/webhooks/${job.applicationId}/${encodeURIComponent(job.token)}/messages/@original`;
  const r=await fetcher(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
  if(!r.ok){await r.body?.cancel();throw Error('Discord response HTTP '+r.status);}await r.body?.cancel();return {delivered:true};

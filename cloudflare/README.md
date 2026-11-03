@@ -14,6 +14,10 @@ Supplying `min_edge` or `min_win` explicitly opts into the stricter modeled-edge
 
 Only the edge path reprices candidates and requires a quote at most 30 seconds old. Historical observations remain an assumed-fee hold model, not verified copier profitability. Fine historical price retention, history page ceilings and survivor bias can limit coverage. Prior complete history is retained on failure, refreshed after 24 hours and excluded after 48 hours.
 
+## Dashboard SCAN → Discord
+
+`POST /scan` lets the dashboard's SCAN button post the same default conviction card (top 10) to a Discord channel. It accepts only requests whose `Origin` is `https://lucksociety.github.io`, queues at most one run per 3-minute window (workflow ID `dash-<window>`; extra clicks get `429` with a `cooldown` in seconds), skips the progress message, and posts one new message through the channel webhook in the `DASHBOARD_WEBHOOK_URL` secret. Without that secret the route returns `503` and nothing is posted. Set it with `npx wrangler secret put DASHBOARD_WEBHOOK_URL` (Discord channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy URL). `/health` reports `dashboardRelay: true` once it is set.
+
 ## Resources
 
 - Worker: `polysharp`

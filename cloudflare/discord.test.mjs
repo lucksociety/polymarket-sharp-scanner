@@ -32,3 +32,26 @@ test('conviction reports show observed bets without requiring modeled qualificat
  const {convictionReport}=await import('./discord.mjs');const p={...bet().p,wallet:'w',conv:.25,costBook:100000,remainingCost:25000,currentValue:30000,curPrice:.6,netShares:50000};
  const r=convictionReport({plays:Array(10).fill(p),positions:[p],options:{...options,limit:10},rosterCount:2,scannedWallets:1,complete:false});assert.equal(r.embeds.length,1);assert.equal(r.embeds[0].fields.length,11);assert.match(r.embeds[0].fields[10].name,/^10\./);assert.match(r.content,/https:\/\/lucksociety\.github\.io\/polymarket-sharp-scanner\//);assert.match(r.embeds[0].description,/Partial scan/);assert.match(r.embeds[0].fields[1].value,/25.0%/);assert.match(r.embeds[0].fields[1].value,/MAX conviction/);assert.match(r.embeds[0].fields[1].value,/Price: 60\.0¢/);assert.match(r.embeds[0].fields[0].value,/not a verified edge/);assert.deepEqual(r.allowed_mentions,{parse:[]});
 });
+
+const HOOK='https://discord.com/api/webhooks/123456789012345678/SYNTHETIC_webhook-token';
+const dash=(method='POST',origin='https://lucksociety.github.io')=>new Request('https://test.example/scan',{method,headers:origin?{Origin:origin}:{}});
+test('dashboard /scan only accepts the dashboard origin and requires a configured webhook',async()=>{
+ let calls=0;const env={DASHBOARD_WEBHOOK_URL:HOOK,CACHE:{},SCANS:{async create(){calls++;}}};
+ assert.equal((await handle(dash('POST','https://evil.example'),env)).status,403);
+ assert.equal((await handle(dash('POST',null),env)).status,403);
+ assert.equal((await handle(dash(),{...env,DASHBOARD_WEBHOOK_URL:'https://example.com/hook'})).status,503);
+ assert.equal((await handle(dash('GET'),env)).status,405);
+ const pre=await handle(dash('OPTIONS'),env);assert.equal(pre.status,204);assert.equal(pre.headers.get('access-control-allow-origin'),'https://lucksociety.github.io');
+ assert.equal(calls,0);
+});
+test('dashboard /scan queues one default conviction scan per 3-minute window',async()=>{
+ let queued;const env={DASHBOARD_WEBHOOK_URL:HOOK,CACHE:{},SCANS:{async create(v){queued=v;}}};
+ const r=await handle(dash(),env);assert.equal(r.status,202);assert.equal(r.headers.get('access-control-allow-origin'),'https://lucksociety.github.io');
+ assert.match(queued.id,/^dash-\d+$/);assert.equal(queued.params.source,'dashboard');assert.equal(queued.params.webhook,HOOK);assert.equal(queued.params.options.ranking,'conviction');assert.equal(queued.params.options.limit,10);assert.equal(queued.params.token,undefined);
+ const busy=await handle(dash(),{...env,SCANS:{async create(){throw Error('exists');}}});assert.equal(busy.status,429);const b=await busy.json();assert.ok(b.cooldown>0&&b.cooldown<=180);
+});
+test('dashboard-triggered results post one new webhook message without mentions',async()=>{
+ let req;await editReply({source:'dashboard',webhook:HOOK},report({options}),async(u,o)=>{req={u,...o};return new Response(null,{status:200});});
+ assert.equal(req.method,'POST');assert.equal(req.u,HOOK+'?wait=true');const body=JSON.parse(req.body);assert.deepEqual(body.allowed_mentions,{parse:[]});assert.match(body.content,/dashboard/);
+ await assert.rejects(editReply({source:'dashboard',webhook:HOOK},report({options}),async()=>new Response(null,{status:404})),/webhook HTTP 404/);
+});

@@ -112,7 +112,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
   try{
    const predictions=job.options.ranking==='predictions';
    const traders=await (predictions?predictionsRoster:roster)(get,warnings);
-   await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':'sharp'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
+   if(job.source!=='dashboard')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':'sharp'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
    const {evidence,missing}=job.options.ranking==='edge'?await loadEvidence(step,this.env,traders,job.receivedAt):{evidence:{history:[]},missing:[]};
    const historyPending=job.options.ranking==='edge'?await warmHistory(step,this.env,missing,job.receivedAt):0;
    const walletJobs=traders.map((t,i)=>({id:'wallet-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*2500}}));
