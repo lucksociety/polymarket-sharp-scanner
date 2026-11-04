@@ -55,6 +55,20 @@ export const CORE = [
   { name:"0x3mf3…2fxd", wallet:"0x3a55b0c45449b955e43ec10734bd988bb5d1394e", spec:"UFC +$42K" },
   { name:"tennischamp", wallet:"0x8bfee7aeca33003fe9d7398d5143dc7866542d74", spec:"UFC +$40K" },
   { name:"3648393489047", wallet:"0x67ac9e1ad7d7e74ef0215d14fc8edb538e4fedf1", spec:"UFC +$36K" },
+  // Insider watch (2026-11-04): sports wallets whose held-to-result win rate far exceeds their entry prices (>=3 sigma).
+  { name:"TopGleaguePicks", wallet:"0x310f6937ed43dfb00722198ff787ca4a61fc4e42", spec:"Esports · insider watch: 96% held wins @65¢" },
+  { name:"gardenshed", wallet:"0x81da605d7dac06478367ed1bae0593b7791ca109", spec:"Soccer · insider watch: 85% held wins @46¢" },
+  { name:"frohp5", wallet:"0xc3973025163de81e367ad29c21e296e51684bb3b", spec:"Esports · UFC · insider watch: 74% held wins @66¢" },
+  { name:"Future-Tarot-Trader", wallet:"0x10ef48324b3ebc06d9137794c70285e8e37a7d7b", spec:"Esports · insider watch: 96% held wins @83¢" },
+  { name:"mrworldwide", wallet:"0x98d04f9eb52d08ef9697f6eb8d7cfe8d46e5f14a", spec:"MLB · Soccer · insider watch: 83% held wins @75¢" },
+  { name:"LonnieHawkinss", wallet:"0xa797d6bd8fe6e404bb4d8e4ab3d97c38336fdede", spec:"Soccer · insider watch: 99% held wins @88¢" },
+  { name:"HVAB", wallet:"0x8546a601f7c7cc3dae7141f20b0e09e42bbf35b8", spec:"Tennis · insider watch: 98% held wins @89¢" },
+  { name:"Mind.The.Gap", wallet:"0x83255595ba1fadd2e734cb30a0fb8110301a19cc", spec:"Soccer · insider watch: 83% held wins @74¢" },
+  { name:"0x2ff0\u202646e3", wallet:"0x2ff0e36eb9632a47c3eb75224bba1f141a6346e3", spec:"NBA · Soccer · insider watch: 78% held wins @68¢" },
+  { name:"iii252", wallet:"0xed446954680979932092e970b443e6ae61e34f76", spec:"Esports · insider watch: 79% held wins @68¢" },
+  { name:"00XyXyzzyxzzqyej233j2j32", wallet:"0x1f7105a18d9f36aef7c83e5df210e57cf487b2e4", spec:"Tennis · UFC · insider watch: 91% held wins @83¢" },
+  { name:"0x6db5\u2026e279", wallet:"0x6db568e61e5e3de7d87f831431b673f38ce2e279", spec:"MLB · UFC · Soccer · insider watch: 84% held wins @67¢" },
+  { name:"aaaa298", wallet:"0x4ebc2722adc772bde8680792d0a6fdf15499a33d", spec:"Esports · insider watch: 76% held wins @67¢" },
 ];
 export function classify(tags, slug){
   const t = new Set(tags); const s = slug||"";
