@@ -325,11 +325,11 @@ footer a{color:var(--gold)}
 <script src="engine.js"></script>
 <script>
 /* ============ CONFIG: the roster ============
-   Sharp-only roster (audited 2026-11-05). Every wallet passed ALL of:
-   lifetime profit >= $50K (Polymarket user-stats economic P&L), >= 75 settled markets, >= 2% return on stake,
-   consistency (>= 50% profitable months, or still >= 50% of profit after removing its 3 biggest wins),
-   still profitable without its 3 biggest wins, no single loss > 50% of lifetime profit,
-   and the last 90 days not down more than 10% of lifetime profit. Keep cloudflare/roster.mjs in sync. */
+   Existing roster preserved; expanded 2026-11-05 with researched sport specialists.
+   New additions: positive Polymarket lifetime realized P&L, reported overall win rate >50%,
+   profitable reported sport records and a trade within seven days at the research snapshot.
+   Sources and methodological limitations: research/roster-2026-11-05.json.
+   These criteria do not establish an independently verified edge. Keep cloudflare/roster.mjs in sync. */
 const CORE = [
   { name:"BreakTheBank", wallet:"0xf0318c32136c2db7fec88b84869aee6a1106c80c", spec:"NFL +$8.2M · NBA +$780K" },
   { name:"ndb1", wallet:"0xfea31bc088000ff909be1dfd8d0e3f2c7ef2d227", spec:"Soccer +$1.0M" },
@@ -369,6 +369,22 @@ const CORE = [
   { name:"Stavenson", wallet:"0xf5fe759cece500f58a431ef8dacea321f6e3e23d", spec:"Sports · reported lifetime +$306K · 92.5% win rate" },
   { name:"BillyGating", wallet:"0x2dfa4e79eca44b7c774f40a45535adbc368a6f60", spec:"Tennis · Esports · lifetime realized +$711K · reported 60% win rate" },
   { name:"HomeRunHazard", wallet:"0x5268527977f700f9bf9b6d5cd843859e4e70135d", spec:"Sports · lifetime realized +$2.9M · reported 53% win rate · market maker" },
+  {"name":"theowalcott","wallet":"0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa","spec":"Soccer · lifetime realized +$883K · reported 52% win rate"},
+  {"name":"Jsram","wallet":"0x83720820a8aa6c3f20ad71850e7a1a17d16c5223","spec":"Soccer · UFC · lifetime realized +$2301K · reported 70% win rate"},
+  {"name":"juice-fruit","wallet":"0x5fdd66ffd0325d4e8d1d86fbec50caa31770a747","spec":"Soccer · NBA · lifetime realized +$814K · reported 67% win rate"},
+  {"name":"lfg100k","wallet":"0xd3911bd5e070c9ad9a9519c966347802d8f3b109","spec":"Soccer · lifetime realized +$156K · reported 66% win rate"},
+  {"name":"fakeky","wallet":"0xf880add3ab145ec40627abe09217bc7b51bd89c0","spec":"Soccer · lifetime realized +$132K · reported 86% win rate"},
+  {"name":"darkumbreon88","wallet":"0x0235dc24b38772bf3339a9e5ec5db3d3a05fcee5","spec":"Soccer · lifetime realized +$107K · reported 66% win rate"},
+  {"name":"Takon88","wallet":"0xa96274cc1b321afc8cbdc1ba07f7e2d471e6f7c8","spec":"Soccer · lifetime realized +$314K · reported 59% win rate"},
+  {"name":"ArielFilipino","wallet":"0xe18ecc345e00ee7c4f2d1f676f3dd2acb112f826","spec":"NFL · College football · lifetime realized +$616K · reported 62% win rate"},
+  {"name":"drainedandpoor","wallet":"0x5e6e2c3f06686f2607b86c90e35f536e81a1be00","spec":"NBA · lifetime realized +$731K · reported 55% win rate"},
+  {"name":"ropetard","wallet":"0x2c866881290c2197960f06448d3a236d9f20d939","spec":"NBA · lifetime realized +$79K · reported 53% win rate"},
+  {"name":"ic4cream","wallet":"0x27f738fe203827445690339104aae35b20bc44b0","spec":"NHL · UFC · College football · lifetime realized +$427K · reported 60% win rate"},
+  {"name":"CUTJALENHURTS","wallet":"0xf68a281980f8c13828e84e147e3822381d6e5b1b","spec":"NHL · Esports · MLB · lifetime realized +$1264K · reported 55% win rate"},
+  {"name":"dabossrealman","wallet":"0xc0e4f49b80a2162aa8c1c1ad1bd0867574e3dd38","spec":"MLB · NHL · lifetime realized +$173K · reported 67% win rate"},
+  {"name":"yesmate","wallet":"0x5d7639ed5fd3c5ebf0fc69d548e1046acd0f9168","spec":"Tennis · lifetime realized +$396K · reported 72% win rate"},
+  {"name":"esportsbetter1","wallet":"0x866056133a70de9282a080758858d1a0c8b393ed","spec":"Esports · lifetime realized +$68K · reported 60% win rate"},
+  {"name":"KateBollinger","wallet":"0x3f975d4186c87b3b4a39997cc37e71cc70ca4059","spec":"LoL · Esports · lifetime realized +$47K · reported 56% win rate"},
 ];
 
 let TRADERS = [...CORE];

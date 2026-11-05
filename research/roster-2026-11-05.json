@@ -1,0 +1,487 @@
+{
+  "checkedAt": "2026-11-05T13:05:34.397Z",
+  "criteria": "Positive lifetime realized_pnl from Polymarket user-stats; reported overall win rate above 50%; profitable sport record in Rivo; trade in the last 7 days. Existing 38 wallets preserved. No assertion of exhaustive best ranking or independent verification of Rivo win rates.",
+  "limitations": "Rivo counts tracked settled trades/fills rather than a uniform set of independent bets and may lag. Rivo profits differ from Polymarket realized P&L; use Polymarket values for lifetime profit. Soccer specialists may hold no upcoming match positions. All wallets scanned across all sports; specialties are descriptive, not eligibility restrictions. Win rate and conviction do not establish an edge.",
+  "wallets": [
+    {
+      "name": "theowalcott",
+      "wallet": "0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa",
+      "spec": "Soccer · lifetime realized +$883K · reported 52% win rate",
+      "reportedOverallWinRate": 52,
+      "lifetimeRealizedPnl": 882569.7297,
+      "pnlTimestamp": 1793667358,
+      "lastTrade": "2026-11-02T20:14:45.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "1250-1123",
+          "reportedWinRate": "53 %",
+          "profit": "+$1.2M",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        }
+      ]
+    },
+    {
+      "name": "Jsram",
+      "wallet": "0x83720820a8aa6c3f20ad71850e7a1a17d16c5223",
+      "spec": "Soccer · UFC · lifetime realized +$2301K · reported 70% win rate",
+      "reportedOverallWinRate": 70,
+      "lifetimeRealizedPnl": 2300756.43696,
+      "pnlTimestamp": 1793883400,
+      "lastTrade": "2026-11-05T12:59:07.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x83720820a8aa6c3f20ad71850e7a1a17d16c5223",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x83720820a8aa6c3f20ad71850e7a1a17d16c5223",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x83720820a8aa6c3f20ad71850e7a1a17d16c5223&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "669-224",
+          "reportedWinRate": "75 %",
+          "profit": "+$727.1K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        }
+      ]
+    },
+    {
+      "name": "juice-fruit",
+      "wallet": "0x5fdd66ffd0325d4e8d1d86fbec50caa31770a747",
+      "spec": "Soccer · NBA · lifetime realized +$814K · reported 67% win rate",
+      "reportedOverallWinRate": 67,
+      "lifetimeRealizedPnl": 813660.047757,
+      "pnlTimestamp": 1793840197,
+      "lastTrade": "2026-11-04T19:55:58.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x5fdd66ffd0325d4e8d1d86fbec50caa31770a747",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x5fdd66ffd0325d4e8d1d86fbec50caa31770a747",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x5fdd66ffd0325d4e8d1d86fbec50caa31770a747&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "227-43",
+          "reportedWinRate": "84 %",
+          "profit": "+$600.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        },
+        {
+          "sport": "nfl",
+          "record": "21-4",
+          "reportedWinRate": "84 %",
+          "profit": "+$262.5K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nfl/monthly"
+        },
+        {
+          "sport": "nba",
+          "record": "17-4",
+          "reportedWinRate": "81 %",
+          "profit": "+$207.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nba/monthly"
+        },
+        {
+          "sport": "tennis",
+          "record": "27-10",
+          "reportedWinRate": "73 %",
+          "profit": "+$158.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/tennis/monthly"
+        }
+      ]
+    },
+    {
+      "name": "lfg100k",
+      "wallet": "0xd3911bd5e070c9ad9a9519c966347802d8f3b109",
+      "spec": "Soccer · lifetime realized +$156K · reported 66% win rate",
+      "reportedOverallWinRate": 66,
+      "lifetimeRealizedPnl": 155760.741428,
+      "pnlTimestamp": 1793408133,
+      "lastTrade": "2026-10-30T21:59:16.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0xd3911bd5e070c9ad9a9519c966347802d8f3b109",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0xd3911bd5e070c9ad9a9519c966347802d8f3b109",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0xd3911bd5e070c9ad9a9519c966347802d8f3b109&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "86-22",
+          "reportedWinRate": "80 %",
+          "profit": "+$498.9K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        },
+        {
+          "sport": "nba",
+          "record": "35-10",
+          "reportedWinRate": "78 %",
+          "profit": "+$45.4K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nba/monthly"
+        }
+      ]
+    },
+    {
+      "name": "fakeky",
+      "wallet": "0xf880add3ab145ec40627abe09217bc7b51bd89c0",
+      "spec": "Soccer · lifetime realized +$132K · reported 86% win rate",
+      "reportedOverallWinRate": 86,
+      "lifetimeRealizedPnl": 132488.923741,
+      "pnlTimestamp": 1793840197,
+      "lastTrade": "2026-11-04T21:54:19.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0xf880add3ab145ec40627abe09217bc7b51bd89c0",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0xf880add3ab145ec40627abe09217bc7b51bd89c0",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0xf880add3ab145ec40627abe09217bc7b51bd89c0&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "279-49",
+          "reportedWinRate": "85 %",
+          "profit": "+$215.9K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        }
+      ]
+    },
+    {
+      "name": "darkumbreon88",
+      "wallet": "0x0235dc24b38772bf3339a9e5ec5db3d3a05fcee5",
+      "spec": "Soccer · lifetime realized +$107K · reported 66% win rate",
+      "reportedOverallWinRate": 66,
+      "lifetimeRealizedPnl": 107272.855742,
+      "pnlTimestamp": 1793883400,
+      "lastTrade": "2026-11-05T13:00:54.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x0235dc24b38772bf3339a9e5ec5db3d3a05fcee5",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x0235dc24b38772bf3339a9e5ec5db3d3a05fcee5",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x0235dc24b38772bf3339a9e5ec5db3d3a05fcee5&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "429-170",
+          "reportedWinRate": "72 %",
+          "profit": "+$191.9K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        },
+        {
+          "sport": "mma",
+          "record": "7-7",
+          "reportedWinRate": "50 %",
+          "profit": "-$1.5K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/mma/monthly"
+        }
+      ]
+    },
+    {
+      "name": "Takon88",
+      "wallet": "0xa96274cc1b321afc8cbdc1ba07f7e2d471e6f7c8",
+      "spec": "Soccer · lifetime realized +$314K · reported 59% win rate",
+      "reportedOverallWinRate": 59,
+      "lifetimeRealizedPnl": 313742.05635,
+      "pnlTimestamp": 1793321692,
+      "lastTrade": "2026-10-29T17:43:56.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0xa96274cc1b321afc8cbdc1ba07f7e2d471e6f7c8",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0xa96274cc1b321afc8cbdc1ba07f7e2d471e6f7c8",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0xa96274cc1b321afc8cbdc1ba07f7e2d471e6f7c8&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "147-98",
+          "reportedWinRate": "60 %",
+          "profit": "+$411.0K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        }
+      ]
+    },
+    {
+      "name": "ArielFilipino",
+      "wallet": "0xe18ecc345e00ee7c4f2d1f676f3dd2acb112f826",
+      "spec": "NFL · College football · lifetime realized +$616K · reported 62% win rate",
+      "reportedOverallWinRate": 62,
+      "lifetimeRealizedPnl": 615588.449737,
+      "pnlTimestamp": 1793332506,
+      "lastTrade": "2026-10-29T15:01:59.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0xe18ecc345e00ee7c4f2d1f676f3dd2acb112f826",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0xe18ecc345e00ee7c4f2d1f676f3dd2acb112f826",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0xe18ecc345e00ee7c4f2d1f676f3dd2acb112f826&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "nfl",
+          "record": "80-42",
+          "reportedWinRate": "66 %",
+          "profit": "+$379.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nfl/monthly"
+        },
+        {
+          "sport": "nba",
+          "record": "46-72",
+          "reportedWinRate": "39 %",
+          "profit": "+$37.8K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nba/monthly"
+        }
+      ]
+    },
+    {
+      "name": "drainedandpoor",
+      "wallet": "0x5e6e2c3f06686f2607b86c90e35f536e81a1be00",
+      "spec": "NBA · lifetime realized +$731K · reported 55% win rate",
+      "reportedOverallWinRate": 55,
+      "lifetimeRealizedPnl": 730604.01687,
+      "pnlTimestamp": 1793858197,
+      "lastTrade": "2026-11-04T13:03:33.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x5e6e2c3f06686f2607b86c90e35f536e81a1be00",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x5e6e2c3f06686f2607b86c90e35f536e81a1be00",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x5e6e2c3f06686f2607b86c90e35f536e81a1be00&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "nba",
+          "record": "138-93",
+          "reportedWinRate": "60 %",
+          "profit": "+$333.8K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nba/monthly"
+        },
+        {
+          "sport": "esports",
+          "record": "255-235",
+          "reportedWinRate": "52 %",
+          "profit": "+$134.2K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/esports/monthly"
+        }
+      ]
+    },
+    {
+      "name": "ropetard",
+      "wallet": "0x2c866881290c2197960f06448d3a236d9f20d939",
+      "spec": "NBA · lifetime realized +$79K · reported 53% win rate",
+      "reportedOverallWinRate": 53,
+      "lifetimeRealizedPnl": 79461.442241,
+      "pnlTimestamp": 1793850997,
+      "lastTrade": "2026-11-04T23:24:31.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x2c866881290c2197960f06448d3a236d9f20d939",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x2c866881290c2197960f06448d3a236d9f20d939",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x2c866881290c2197960f06448d3a236d9f20d939&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "nba",
+          "record": "116-99",
+          "reportedWinRate": "54 %",
+          "profit": "+$339.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nba/monthly"
+        }
+      ]
+    },
+    {
+      "name": "ic4cream",
+      "wallet": "0x27f738fe203827445690339104aae35b20bc44b0",
+      "spec": "NHL · UFC · College football · lifetime realized +$427K · reported 60% win rate",
+      "reportedOverallWinRate": 60,
+      "lifetimeRealizedPnl": 427416.86873,
+      "pnlTimestamp": 1793883400,
+      "lastTrade": "2026-11-05T00:14:25.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x27f738fe203827445690339104aae35b20bc44b0",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x27f738fe203827445690339104aae35b20bc44b0",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x27f738fe203827445690339104aae35b20bc44b0&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "nfl",
+          "record": "61-31",
+          "reportedWinRate": "66 %",
+          "profit": "+$70.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nfl/monthly"
+        },
+        {
+          "sport": "nhl",
+          "record": "31-11",
+          "reportedWinRate": "74 %",
+          "profit": "+$88.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nhl/monthly"
+        },
+        {
+          "sport": "mlb",
+          "record": "12-0",
+          "reportedWinRate": "100 %",
+          "profit": "+$22.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/mlb/monthly"
+        },
+        {
+          "sport": "mma",
+          "record": "17-3",
+          "reportedWinRate": "85 %",
+          "profit": "+$38.1K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/mma/monthly"
+        }
+      ]
+    },
+    {
+      "name": "CUTJALENHURTS",
+      "wallet": "0xf68a281980f8c13828e84e147e3822381d6e5b1b",
+      "spec": "NHL · Esports · MLB · lifetime realized +$1264K · reported 55% win rate",
+      "reportedOverallWinRate": 55,
+      "lifetimeRealizedPnl": 1264361.462482,
+      "pnlTimestamp": 1793865399,
+      "lastTrade": "2026-11-05T07:17:06.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0xf68a281980f8c13828e84e147e3822381d6e5b1b",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0xf68a281980f8c13828e84e147e3822381d6e5b1b",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0xf68a281980f8c13828e84e147e3822381d6e5b1b&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "soccer",
+          "record": "426-769",
+          "reportedWinRate": "36 %",
+          "profit": "+$188.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/soccer/monthly"
+        },
+        {
+          "sport": "nfl",
+          "record": "465-409",
+          "reportedWinRate": "53 %",
+          "profit": "+$126.0K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nfl/monthly"
+        },
+        {
+          "sport": "nhl",
+          "record": "38-24",
+          "reportedWinRate": "61 %",
+          "profit": "+$72.2K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nhl/monthly"
+        },
+        {
+          "sport": "mlb",
+          "record": "11-2",
+          "reportedWinRate": "85 %",
+          "profit": "+$14.6K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/mlb/monthly"
+        },
+        {
+          "sport": "mma",
+          "record": "7-11",
+          "reportedWinRate": "39 %",
+          "profit": "-$38.2K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/mma/monthly"
+        },
+        {
+          "sport": "esports",
+          "record": "358-286",
+          "reportedWinRate": "56 %",
+          "profit": "+$295.7K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/esports/monthly"
+        }
+      ]
+    },
+    {
+      "name": "dabossrealman",
+      "wallet": "0xc0e4f49b80a2162aa8c1c1ad1bd0867574e3dd38",
+      "spec": "MLB · NHL · lifetime realized +$173K · reported 67% win rate",
+      "reportedOverallWinRate": 67,
+      "lifetimeRealizedPnl": 172645.172569,
+      "pnlTimestamp": 1793861797,
+      "lastTrade": "2026-11-05T05:39:42.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0xc0e4f49b80a2162aa8c1c1ad1bd0867574e3dd38",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0xc0e4f49b80a2162aa8c1c1ad1bd0867574e3dd38",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0xc0e4f49b80a2162aa8c1c1ad1bd0867574e3dd38&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "nhl",
+          "record": "110-47",
+          "reportedWinRate": "70 %",
+          "profit": "+$21.5K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/nhl/monthly"
+        },
+        {
+          "sport": "mlb",
+          "record": "42-25",
+          "reportedWinRate": "63 %",
+          "profit": "+$153.3K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/mlb/monthly"
+        }
+      ]
+    },
+    {
+      "name": "yesmate",
+      "wallet": "0x5d7639ed5fd3c5ebf0fc69d548e1046acd0f9168",
+      "spec": "Tennis · lifetime realized +$396K · reported 72% win rate",
+      "reportedOverallWinRate": 72,
+      "lifetimeRealizedPnl": 396356.930088,
+      "pnlTimestamp": 1793883400,
+      "lastTrade": "2026-11-05T11:16:22.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x5d7639ed5fd3c5ebf0fc69d548e1046acd0f9168",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x5d7639ed5fd3c5ebf0fc69d548e1046acd0f9168",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x5d7639ed5fd3c5ebf0fc69d548e1046acd0f9168&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "tennis",
+          "record": "326-139",
+          "reportedWinRate": "70 %",
+          "profit": "+$169.5K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/tennis/monthly"
+        }
+      ]
+    },
+    {
+      "name": "esportsbetter1",
+      "wallet": "0x866056133a70de9282a080758858d1a0c8b393ed",
+      "spec": "Esports · lifetime realized +$68K · reported 60% win rate",
+      "reportedOverallWinRate": 60,
+      "lifetimeRealizedPnl": 68269.448093,
+      "pnlTimestamp": 1793850997,
+      "lastTrade": "2026-11-05T00:59:43.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x866056133a70de9282a080758858d1a0c8b393ed",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x866056133a70de9282a080758858d1a0c8b393ed",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x866056133a70de9282a080758858d1a0c8b393ed&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "mma",
+          "record": "47-17",
+          "reportedWinRate": "73 %",
+          "profit": "+$37.3K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/mma/monthly"
+        }
+      ]
+    },
+    {
+      "name": "KateBollinger",
+      "wallet": "0x3f975d4186c87b3b4a39997cc37e71cc70ca4059",
+      "spec": "LoL · Esports · lifetime realized +$47K · reported 56% win rate",
+      "reportedOverallWinRate": 56,
+      "lifetimeRealizedPnl": 46896.874596,
+      "pnlTimestamp": 1793883400,
+      "lastTrade": "2026-11-05T13:04:07.000Z",
+      "profileSource": "https://rivo.markets/trader/polymarket/0x3f975d4186c87b3b4a39997cc37e71cc70ca4059",
+      "primarySource": "https://data-api.polymarket.com/v2/user-stats?user=0x3f975d4186c87b3b4a39997cc37e71cc70ca4059",
+      "activitySource": "https://data-api.polymarket.com/v2/activity?user=0x3f975d4186c87b3b4a39997cc37e71cc70ca4059&type=TRADE&limit=1&sort_direction=DESC",
+      "sportRecords": [
+        {
+          "sport": "esports",
+          "record": "606-388",
+          "reportedWinRate": "61 %",
+          "profit": "+$474.5K",
+          "period": "monthly leaderboard snapshot",
+          "source": "https://rivo.markets/polymarket-leaderboard/esports/monthly"
+        }
+      ]
+    }
+  ]
+}
