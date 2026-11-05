@@ -34,6 +34,10 @@ export const CORE = [
   { name:"THEHIGHLIFE", wallet:"0x8c0b024c17831a0dde038547b7e791ae6a0d7aa5", spec:"Esports · lifetime +$2.3M · 7% ROI" },
   { name:"zb8", wallet:"0x0224bb9eb0a5c9fd261ac9123a72cbdd5748292a", spec:"Esports · lifetime +$487K" },
   { name:"robustmst", wallet:"0xebfdb8164f0e0748818d6c7a9ac85a323267fd63", spec:"Sports · lifetime +$375K" },
+  { name:"tenniz", wallet:"0xeae1e3f0da9c9adcdd69c021cd0385d9a6b4a67b", spec:"Tennis · lifetime realized +$255K · reported 85% win rate" },
+  { name:"Stavenson", wallet:"0xf5fe759cece500f58a431ef8dacea321f6e3e23d", spec:"Sports · reported lifetime +$306K · 92.5% win rate" },
+  { name:"BillyGating", wallet:"0x2dfa4e79eca44b7c774f40a45535adbc368a6f60", spec:"Tennis · Esports · lifetime realized +$711K · reported 60% win rate" },
+  { name:"HomeRunHazard", wallet:"0x5268527977f700f9bf9b6d5cd843859e4e70135d", spec:"Sports · lifetime realized +$2.9M · reported 53% win rate · market maker" },
 ];
 export function classify(tags, slug){
   const t = new Set(tags); const s = slug||"";
