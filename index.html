@@ -325,11 +325,10 @@ footer a{color:var(--gold)}
 <script src="engine.js"></script>
 <script>
 /* ============ CONFIG: the roster ============
-   Existing roster preserved; expanded 2026-11-05 with researched sport specialists.
-   New additions: positive Polymarket lifetime realized P&L, reported overall win rate >50%,
-   profitable reported sport records and a trade within seven days at the research snapshot.
-   Sources and methodological limitations: research/roster-2026-11-05.json.
-   These criteria do not establish an independently verified edge. Keep cloudflare/roster.mjs in sync. */
+   Existing and user-selected wallets preserved. Researched sport specialists added 2026-11-05.
+   Recruitment criteria, snapshots and limitations: research/roster-2026-11-05.json
+   and research/roster-expansion-2026-11-05.json. Sample win rates describe selected historical
+   positions, not a forecast or proof of copy-trading profitability. Keep cloudflare/roster.mjs in sync. */
 const CORE = [
   { name:"BreakTheBank", wallet:"0xf0318c32136c2db7fec88b84869aee6a1106c80c", spec:"NFL +$8.2M · NBA +$780K" },
   { name:"ndb1", wallet:"0xfea31bc088000ff909be1dfd8d0e3f2c7ef2d227", spec:"Soccer +$1.0M" },
@@ -386,6 +385,26 @@ const CORE = [
   {"name":"esportsbetter1","wallet":"0x866056133a70de9282a080758858d1a0c8b393ed","spec":"Esports · lifetime realized +$68K · reported 60% win rate"},
   {"name":"KateBollinger","wallet":"0x3f975d4186c87b3b4a39997cc37e71cc70ca4059","spec":"LoL · Esports · lifetime realized +$47K · reported 56% win rate"},
   { name:"fantasy7788", wallet:"0x0259b2054f046fe0ee8f3e075fdb85fc3ba9769e", spec:"Esports · lifetime realized +$391K · user-selected wallet" },
+  {"name":"0xabea…72ae","wallet":"0xabea08725590a4c6ae7c8e63214c9628bbc772ae","spec":"NFL · lifetime realized +$69K · pregame sample 59% wins"},
+  {"name":"gmpm2","wallet":"0x67542c3219b37fd1610aad290676ff91cdbfe3bc","spec":"NFL · lifetime realized +$1958K · pregame sample 53% wins"},
+  {"name":"SineNooneEI","wallet":"0x38337de21ff0bb0a11a40761507d51e318d633d1","spec":"Esports · NBA · lifetime realized +$724K · pregame sample 58% wins"},
+  {"name":"EdZachary","wallet":"0xe5b70fd855af9258d9463992e4f1ed7987905ee3","spec":"College football · lifetime realized +$335K · pregame sample 56% wins"},
+  {"name":"mde4life1986","wallet":"0x54ce7dd357766fc3255645e55ef41edd51cc9f80","spec":"College football · NFL · lifetime realized +$242K · pregame sample 55% wins"},
+  {"name":"0xb4f9…c9a7","wallet":"0xb4f978be63cdf75554b0b46a4262a6db597cc9a7","spec":"Soccer · lifetime realized +$407K · pregame sample 54% wins"},
+  {"name":"DelidelaDele","wallet":"0x95c6c9a6727ed203e97230dda61ab19a020e1508","spec":"Soccer · lifetime realized +$277K · pregame sample 51% wins"},
+  {"name":"VD721lsj4938Dk388","wallet":"0x162ca4c5249987872fea1e15c846d7fe80316c47","spec":"Soccer · lifetime realized +$260K · pregame sample 60% wins"},
+  {"name":"beautifulobsession","wallet":"0x0b0e1eb890038cc0f98d26d34842bbe4d1434826","spec":"Soccer · lifetime realized +$122K · pregame sample 68% wins"},
+  {"name":"DaBossHogg","wallet":"0x6157d529ae129fe08f22a27ed42e741d2eaa9fb4","spec":"NHL · Soccer · lifetime realized +$141K · pregame sample 57% wins"},
+  {"name":"timebrotime","wallet":"0x606d65fca4f80b75926c106d0ac8d3ce90bf1aaf","spec":"Soccer · lifetime realized +$97K · pregame sample 75% wins"},
+  {"name":"royalestake","wallet":"0xfb681e23db8d1cca8a6b7e2a70a29e000ddfa240","spec":"NFL · lifetime realized +$229K · pregame sample 51% wins"},
+  {"name":"fatfatcat","wallet":"0x6d98d93b9fa0684f21fa1a2ab475c8ca8b97efe9","spec":"NBA · lifetime realized +$153K · pregame sample 62% wins"},
+  {"name":"johnny234","wallet":"0xd38ad20037839959d89165cf448568d584b28d26","spec":"MLB · NFL · lifetime realized +$496K · pregame sample 55% wins"},
+  {"name":"0x2ce8…4527","wallet":"0x2ce8505aa641791eb8460f6ac6bf5c0511e34527","spec":"UFC · Tennis · lifetime realized +$260K · pregame sample 64% wins"},
+  {"name":"Gooooooollllllllll","wallet":"0xda3a9b7afff7b44ad4fd75308723194e0a11381f","spec":"Esports · lifetime realized +$621K · pregame sample 56% wins"},
+  {"name":"ColdBlooded","wallet":"0xbcc321b6336117432f4e9d2d28b20d8b6795ac9c","spec":"Esports · lifetime realized +$264K · pregame sample 80% wins"},
+  {"name":"0x6918…782b","wallet":"0x6918ea182d963b1fb7888860b8a8b8bcfba5782b","spec":"Esports · lifetime realized +$122K · pregame sample 59% wins"},
+  {"name":"1am1b","wallet":"0xe1f313a980c5cfd4444f66bcf40563eb900e5402","spec":"Esports · lifetime realized +$101K · pregame sample 57% wins"},
+  {"name":"lonmi2511","wallet":"0x997cb45c25e94b4ee58c234ce1f211496a0d51f3","spec":"Esports · lifetime realized +$56K · pregame sample 65% wins"},
 ];
 
 let TRADERS = [...CORE];
