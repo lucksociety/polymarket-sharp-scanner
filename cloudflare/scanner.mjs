@@ -32,12 +32,8 @@ export async function readPublic(url,conditionIds){
  return value;
 }
 export async function roster(get,warnings){
- const traders=CORE.map(t=>({...t})),known=new Set(traders.map(t=>t.wallet.toLowerCase()));
- for(const [category,limit]of [['sports',25],['esports',10]]){
-  try{const r=await get(`${DATA}/v2/leaderboard?category=${category}&time_period=month&sort_by=PNL&limit=${limit}`);if(!Array.isArray(r.data))throw Error('Invalid leaderboard');for(const x of r.data){const wallet=x.user_id?.toLowerCase();if(!/^0x[0-9a-f]{40}$/.test(wallet)||known.has(wallet))continue;known.add(wallet);traders.push({wallet,name:String(x.user_name||wallet.slice(0,8)).slice(0,60),spec:'Monthly discovery',hot:true});}}
-  catch{warnings.push('Monthly '+category+' roster unavailable');}
- }
- return traders;
+ // Sharp-only: scan the audited CORE roster. Monthly leaderboard wallets are not vetted, so they are no longer added automatically.
+ return CORE.map(t=>({...t}));
 }
 export function compactWalletPage(page){
  if(!Array.isArray(page?.data))return page;
