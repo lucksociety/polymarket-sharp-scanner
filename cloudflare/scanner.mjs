@@ -3,14 +3,13 @@ import History from '../history.js';
 import {CORE,SPORTS,classify} from './roster.mjs';
 export {CORE,SPORTS};
 export const DATA='https://data-api.polymarket.com',GAMMA='https://gamma-api.polymarket.com',CLOB='https://clob.polymarket.com';
-export const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,benchmarkMode:'polymarket',minCostShare:.04,minValue:1000};
+export const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,benchmarkMode:'polymarket',minCostShare:.04,minValue:1000,minRecentGames:20,maxChase:.02,minNetBuyUsd:500,minAdditionFraction:.05,requireUnopposed:true};
 export async function pool(items,n,fn){const result=new Array(items.length);let next=0;await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(next<items.length){const i=next++;result[i]=await fn(items[i],i);}}));return result;}
 export function validateOptions(options=[]){
- const out={sport:'All',limit:10,ranking:'conviction',settings:{...DEFAULTS}},seen=new Set();
- const rules={sport:[3,v=>SPORTS.includes(v)],limit:[4,v=>Number.isInteger(v)&&v>=1&&v<=5],budget:[10,v=>Number.isFinite(v)&&v>=1&&v<=10000],min_edge:[10,v=>Number.isFinite(v)&&v>=0&&v<=20],min_win:[10,v=>Number.isFinite(v)&&v>=0&&v<=99]};
+ const out={sport:'All',limit:10,ranking:'edge',settings:{...DEFAULTS}},seen=new Set();
+ const rules={sport:[3,v=>SPORTS.includes(v)],limit:[4,v=>Number.isInteger(v)&&v>=1&&v<=10],budget:[10,v=>Number.isFinite(v)&&v>=1&&v<=10000],min_edge:[10,v=>Number.isFinite(v)&&v>=0&&v<=20],min_win:[10,v=>Number.isFinite(v)&&v>=0&&v<=99]};
  if(!Array.isArray(options))throw Error('Invalid command options');
  for(const o of options){if(!rules[o.name]||seen.has(o.name))throw Error('Unknown or repeated option');seen.add(o.name);if(o.name==='min_edge'||o.name==='min_win')out.ranking='edge';const [type,valid]=rules[o.name];if(o.type!==type||!valid(o.value))throw Error('Invalid '+o.name);if(o.name==='sport'||o.name==='limit')out[o.name]=o.value;else out.settings[{budget:'budget',min_edge:'minEdge',min_win:'minWin'}[o.name]]=o.name==='budget'?o.value:o.value/100;}
- if(out.ranking==='edge'&&!seen.has('limit'))out.limit=3;
  return out;
 }
 const pick=(x,keys)=>Object.fromEntries(keys.filter(k=>Object.hasOwn(x,k)).map(k=>[k,x[k]]));
@@ -81,14 +80,14 @@ export function assessOne(p,scan,evidence,options,q,now=Date.now()){
 }
 export function rankUnique(assessments){
  const best=new Map();for(const a of assessments){const k=E.key(a.p),prev=best.get(k);if(a.eligible&&(!prev||a.roi>prev.roi))best.set(k,a);}
- return [...best.values()].sort((a,b)=>b.roi-a.roi||b.edge-a.edge);
+ const games=new Set();return [...best.values()].sort((a,b)=>b.roi-a.roi||b.edge-a.edge).filter(a=>{const k=(a.p.eventSlug||a.p.conditionId).replace(/-more-markets$/,'');if(games.has(k))return false;games.add(k);return true;});
 }
 export async function buildHistory(t,get,maxPages=30,asOf=Date.now()){
  return History.build({traders:[t],get,pool,data:DATA,gamma:GAMMA,feeRate:.05,maxPages,asOf,classifySport:classify});
 }
-export const command={name:'polysharp',description:'Scan Polymarket sharp wallets and report qualifying sports bets.',type:1,integration_types:[0],contexts:[0],options:[
+export const command={name:'polysharp',description:'Scan all tracked wallets; show paper candidates and watched sports positions.',type:1,integration_types:[0],contexts:[0],options:[
  {name:'sport',description:'Sport to scan (default: all)',type:3,choices:SPORTS.map(x=>({name:x,value:x}))},
- {name:'limit',description:'Maximum qualifying bets to post (1–5)',type:4,min_value:1,max_value:5},
+ {name:'limit',description:'Maximum candidates or watched games to show (1–10)',type:4,min_value:1,max_value:10},
  {name:'budget',description:'Cash budget per bet for liquidity and fee calculations',type:10,min_value:1,max_value:10000},
  {name:'min_edge',description:'Minimum modeled edge in cents per share (default: 2)',type:10,min_value:0,max_value:20},
  {name:'min_win',description:'Minimum conservative estimated win percentage (default: 0)',type:10,min_value:0,max_value:99}

@@ -1,5 +1,7 @@
 import {WorkflowEntrypoint} from 'cloudflare:workers';
 import E from '../engine.js';
+import {scanReport} from './scan-report.mjs';
+import {selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey} from './journal.mjs';
 import {handle,report,convictionReport,predictionsReport,editReply} from './discord.mjs';
 import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage} from './scanner.mjs';
 
@@ -22,6 +24,7 @@ function durableGet(step,phase,deadline=Infinity,budget={used:0,limit:40}){
 }
 async function launchBatch(step,env,name,jobs){
  if(!jobs.length)return;
+ await step.sleep(name+'-admission-pace','1 second');
  await step.do(name,opts,async()=>{await env.SCANS.createBatch(jobs);return true;});
 }
 async function result(step,env,id,deadline=Infinity){
@@ -52,25 +55,26 @@ function historyGet(step,env,job){
   return value;
  };get.exhausted=()=>exhausted;get.failed=()=>failed;return get;
 }
-const historyKey=w=>'history/'+w.toLowerCase();
+const historyKey=w=>'history-v6/'+w.toLowerCase();
 async function loadEvidence(step,env,traders,asOf){
  const rows=await pool(traders,3,t=>step.do('history-cache-'+t.wallet,()=>env.CACHE.get(historyKey(t.wallet),'json')));
- const history=[],missing=[];
+ const history=[],missing=[],manifest=[];
  for(let i=0;i<traders.length;i++){
   const r=rows[i];
-  if(r&&r.builtAt<=asOf&&asOf-r.builtAt<48*3600000&&Array.isArray(r.records))history.push(...r.records);
-  if(!r||asOf-r.builtAt>24*3600000)missing.push(traders[i]);
+  if(r?.ready===true&&r.builtAt<=asOf&&asOf-r.builtAt<24*3600000&&Array.isArray(r.records)){history.push(...r.records);manifest.push({wallet:traders[i].wallet,builtAt:r.builtAt,key:'evidence/v1/'+traders[i].wallet.toLowerCase()+'/'+r.builtAt,records:r.records.length});}
+  if(!r||r.ready!==true||!Array.isArray(r.records)||r.builtAt>asOf||asOf-r.builtAt>24*3600000)missing.push(traders[i]);
  }
- return {evidence:{version:1,odds:[],history,clusters:{}},missing};
+ return {evidence:{version:1,odds:[],history,clusters:{}},missing,manifest};
 }
 async function warmHistory(step,env,traders,asOf){
  const day=new Date(asOf).toISOString().slice(0,10);
- const jobs=traders.map((t,i)=>({id:`history-v5-${day}-${t.wallet}`,params:{kind:'history',trader:t,asOf,delay:720000+i*20000}}));
+ const jobs=traders.map((t,i)=>({id:`history-v6-${day}-${t.wallet}`,params:{kind:'history',trader:t,asOf,delay:720000+i*20000}}));
  try{await launchBatch(step,env,'warm-histories',jobs);return jobs.length;}catch{return 0;}
 }
 export class PolysharpWorkflow extends WorkflowEntrypoint{
  async run(event,step){
   const job=event.payload;
+  if(job.kind==='close'||job.kind==='settlement')return observeMarket(job,step,this.env);
   if(job.kind==='wallet'||job.kind==='quote'){
    if(job.delay)await step.sleep('stagger-start',job.delay);
    let output;
@@ -101,7 +105,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
      return {continuing:true,sequence};
     }
     if(get.exhausted()||get.failed()||result.counts.failedWallets)throw Error('Complete wallet history could not be analyzed');
-    await step.do('save-history',()=>this.env.CACHE.put(historyKey(job.trader.wallet),JSON.stringify(result),{expirationTtl:3*86400}));
+    await step.do('save-history',async()=>{const body=JSON.stringify(result);await this.env.CACHE.put('evidence/v1/'+job.trader.wallet.toLowerCase()+'/'+result.builtAt,body);await this.env.CACHE.put(historyKey(job.trader.wallet),body,{expirationTtl:3*86400});return true;});
     return {records:result.records.length,missingClosing:result.counts.missingClose};
    }catch{
     await step.do('save-history-failure',()=>this.env.CACHE.put('history-error/'+job.trader.wallet,JSON.stringify({at:job.asOf,reason:'Incomplete or unavailable public history; previous complete cache retained'}),{expirationTtl:86400}));
@@ -112,9 +116,9 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
   try{
    const predictions=job.options.ranking==='predictions';
    const traders=await (predictions?predictionsRoster:roster)(get,warnings);
-   if(job.source!=='dashboard')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':'sharp'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
-   const {evidence,missing}=job.options.ranking==='edge'?await loadEvidence(step,this.env,traders,job.receivedAt):{evidence:{history:[]},missing:[]};
-   const historyPending=job.options.ranking==='edge'?await warmHistory(step,this.env,missing,job.receivedAt):0;
+   if(job.source!=='dashboard'&&job.source!=='verification')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':'tracked sports'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
+   const {evidence,missing,manifest}=predictions?{evidence:{history:[],clusters:{}},missing:[],manifest:[]}:await loadEvidence(step,this.env,traders,job.receivedAt);
+   const historyPending=!predictions?await warmHistory(step,this.env,missing,job.receivedAt):0;
    const walletJobs=traders.map((t,i)=>({id:'wallet-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*2500}}));
    await launchBatch(step,this.env,'launch-wallets',walletJobs);
    const walletData=new Map(),retry=[];
@@ -132,18 +136,13 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    }
    const scan=await collect(get,traders,{...job.options,asOf:job.receivedAt},(_fn,t)=>{if(!walletData.has(t.wallet))throw Error('Wallet unavailable after retry');return walletData.get(t.wallet);});
    if(warnings.length)scan.complete=false;warnings.push(...scan.warnings);
-   if(job.options.ranking!=='edge'){
-    const plays=E.topConviction(scan.candidates,{now:Date.now(),limit:job.options.limit});
-    const payload=convictionReport({plays,positions:scan.positions,positionCount:scan.positions.length,rosterCount:traders.length,scannedWallets:scan.scannedWallets,complete:scan.complete,warnings,options:job.options,asOf:job.receivedAt});
-    await step.do('send-conviction-result',opts,()=>editReply(job,payload));
-    return {mode:'conviction',published:plays.length,complete:scan.complete,positions:scan.positions.length,wallets:scan.scannedWallets,roster:traders.length,top:plays.map(p=>({wallet:p.wallet,conditionId:p.conditionId,conv:p.conv,outcome:p.outcome}))};
-   }
+   const watchlist=selectWatchlist(scan.candidates,{now:Date.now(),limit:job.options.limit});
    if(missing.length>historyPending)warnings.push(`${missing.length-historyPending} wallet histories are unavailable or exceeded the background budget.`);
    if(evidence.history.length===0)warnings.push('Trader history has not warmed yet. No wallet can qualify without sufficient prior observations.');
    const assessments=[];
-   // Assess every representative within the first 60 distinct outcome candidates, like the dashboard quote batch.
-   const keys=[...new Set(scan.candidates.sort((a,b)=>b.conv-a.conv).map(E.key))].slice(0,60),selected=new Set(keys);
-   const candidates=scan.candidates.filter(p=>selected.has(E.key(p)));
+   // Price up to 40 evidence-qualified outcome groups plus the separate observed watchlist.
+   const keys=[...new Set(scan.candidates.filter(p=>E.quality(p.wallet,p.sport,evidence.history,job.receivedAt,job.options.settings.minGames).qualified).sort((a,b)=>b.conv-a.conv).map(E.key))].slice(0,40),selected=new Set(keys);
+   const candidates=[...new Map([...scan.candidates.filter(p=>selected.has(E.key(p))),...watchlist].map(p=>[p.wallet+'|'+p.asset,p])).values()];
    const quoteCache=new Map();
    const unique=[...new Map(candidates.map(p=>[p.asset,p])).values()];
    const quoteIds=new Map();
@@ -158,18 +157,48 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
      assessments.push(a);
     }catch{warnings.push('One candidate could not be priced or assessed.');}
    }
-   // Reprice the leading eligible candidates immediately before sending a public recommendation.
-   const final=[],refreshGet=durableGet(step,'final-quote',deadline,publicBudget);
-   for(const a of rankUnique(assessments).slice(0,10)){
-    try{const q=await quote(a.p,refreshGet),fresh=await step.do('final-assess-'+a.p.asset.slice(-30),()=>({...assessOne(a.p,scan,evidence,job.options,q),quoteAt:q.quoteAt}));if(fresh.eligible)final.push(fresh);}catch{warnings.push('A leading candidate failed final quote validation.');}
-   }
-   const bets=rankUnique(final).filter(a=>Date.now()-a.quoteAt<=30000&&a.p.game>Date.now()).slice(0,job.options.limit);
-   const payload=report({bets,warnings:[...new Set(warnings)],positionCount:scan.positions.length,scannedWallets:scan.scannedWallets,rosterCount:traders.length,candidateCount:keys.length,historyCount:evidence.history.length,historyPending,options:job.options,complete:scan.complete});
-   await step.do('send-result',opts,()=>editReply(job,payload));
-   return {published:bets.length,complete:scan.complete,positions:scan.positions.length,wallets:scan.scannedWallets,roster:traders.length,candidates:keys.length};
+   // Refresh every displayed entry immediately before freezing its paper observation.
+   const leading=rankUnique(assessments).slice(0,job.options.limit),refreshPositions=[...new Map([...leading.map(a=>a.p),...watchlist].map(p=>[p.asset,p])).values()],refreshIds=new Map();
+   const refreshJobs=await Promise.all(refreshPositions.map(async(p,i)=>{const id='refresh-'+await digest(event.instanceId+'|'+p.asset);refreshIds.set(p.asset,id);return{id,params:{kind:'quote',position:p,delay:1000+i*500}}}));
+   await launchBatch(step,this.env,'refresh-displayed-quotes',refreshJobs);
+   const freshAssessments=[];
+   await pool(candidates,3,async p=>{if(!refreshIds.has(p.asset))return;try{const q=await result(step,this.env,refreshIds.get(p.asset),deadline);quoteCache.set(p.asset,q);const a=await step.do('refresh-assess-'+p.wallet+'-'+p.asset.slice(-30),()=>({...assessOne(p,scan,evidence,job.options,q),quoteAt:q.quoteAt}));freshAssessments.push(a);}catch{quoteCache.delete(p.asset);freshAssessments.push({p,eligible:false,reasons:['Executable quote unavailable']});}});
+   const bets=rankUnique(freshAssessments).filter(a=>Date.now()-a.quoteAt<=30000&&a.p.game>Date.now()).slice(0,job.options.limit);
+   return await finishScan({step,env:this.env,job,runId:event.instanceId,scan,traders,watchlist,bets,assessments:[...new Map([...assessments,...freshAssessments].map(a=>[a.p.wallet+'|'+a.p.asset,a])).values()],quotes:quoteCache,evidenceManifest:manifest,historyCount:evidence.history.length,historyPending,warnings});
   }catch{
+   if(job.source==='verification')return{published:0,incomplete:true,verification:true};
    await step.do('send-failure',opts,()=>editReply(job,{content:`☘ /${job.options.ranking==='predictions'?'predictions':'polysharp'} could not finish a complete scan. No picks were promoted. Please try again shortly; public API failures or platform limits may have interrupted this run.`,embeds:[],allowed_mentions:{parse:[]}}));
    return {published:0,incomplete:true};
   }
  }
+}
+
+async function finishScan({step,env,job,runId,scan,traders,watchlist,bets,assessments,quotes,evidenceManifest,historyCount,historyPending,warnings}){
+ const snapshotAt=await step.do('paper-snapshot-time',()=>Date.now());
+ const rendered=scanReport({bets:bets.filter(a=>a.p.game>snapshotAt),watchlist:watchlist.filter(p=>p.game>snapshotAt),scan,rosterCount:traders.length,historyCount,historyPending,options:job.options,assessments,quotes,now:snapshotAt});
+ const key=journalKey(runId,job.receivedAt),record=freezeRun({runId,job:{...job,rosterCount:traders.length},scan,watchlist:rendered.watchlist,candidates:rendered.candidates,assessments,quotes,evidenceManifest,payload:rendered.payload,now:snapshotAt});
+ const prepared=await step.do('freeze-paper-signal',opts,async()=>{if(new TextEncoder().encode(JSON.stringify(record)).length>850000)throw Error('Frozen signal exceeds safe storage size');const saved=await putPrepared(env.CACHE,key,record);return{payload:saved.payload,preparedAt:saved.preparedAt,entries:saved.entries.map(e=>({kind:e.kind,asset:e.position.asset,conditionId:e.position.conditionId,game:e.position.game,quoteAt:e.quote?.quoteAt}))};});
+ const settled=new Map(),closes=new Map();
+ for(const e of prepared.entries){settled.set(e.conditionId,{id:'settle-v1-'+e.conditionId.slice(2),params:{kind:'settlement',conditionId:e.conditionId,game:e.game}});closes.set(e.asset,{id:'close-v1-'+await digest(e.asset+'|'+e.game),params:{kind:'close',asset:e.asset,game:e.game}});}
+ const verification=job.source==='verification';let trackingQueued=!verification;if(!verification)try{await launchBatch(step,env,'schedule-paper-observations',[...settled.values(),...closes.values()]);}catch{trackingQueued=false;}
+ const receipt=await step.do('send-result',opts,()=>{if(verification)return{delivered:false,verification:true};if(prepared.entries.some(e=>e.kind==='candidate'&&(!e.quoteAt||Date.now()-e.quoteAt>30000)))throw Error('Candidate quote expired before publication');return editReply(job,prepared.payload);});
+ let receiptSaved=true;
+ try{await step.do('record-publication',opts,()=>env.CACHE.put(publicationKey(key),JSON.stringify({runId,delivered:receipt.delivered===true,verification,observedAt:Date.now(),trackingQueued,messageId:receipt.messageId||null,channelId:receipt.channelId||job.channelId||null})));}catch{receiptSaved=false;}
+ return{mode:'paper',verification,published:prepared.entries.filter(e=>e.kind==='candidate').length,watched:prepared.entries.filter(e=>e.kind==='watchlist').length,complete:scan.complete,positions:scan.positions.length,wallets:scan.scannedWallets,roster:traders.length,journal:key,receiptSaved,trackingQueued};
+}
+async function observeMarket(job,step,env){
+ if(job.kind==='close'){
+  await step.sleepUntil('wait-for-pregame-close',job.game+60000);
+  const get=durableGet(step,'closing-observation');let point=null,error=null;
+  try{const j=await get(`https://data-api.polymarket.com/v2/prices-history?token_id=${job.asset}&as_of=${Math.floor(job.game/1000)-1}`);point=(j.data||[]).filter(p=>Number.isFinite(p.resolution_seconds)&&p.resolution_seconds>=0&&p.timestamp*1000>=job.game-15*60000&&(p.timestamp+p.resolution_seconds)*1000<job.game&&p.price>0&&p.price<1).sort((a,b)=>b.timestamp-a.timestamp)[0]||null;}catch{error='Pregame closing observation unavailable';}
+  await step.do('save-pregame-close',()=>env.CACHE.put(closeKey(job.asset,job.game),JSON.stringify({asset:job.asset,game:job.game,observedAt:Date.now(),point,error,source:'Polymarket v2 strictly pregame price bucket'})));return{observed:Boolean(point)};
+ }
+ await step.sleepUntil('wait-for-game-result',job.game+3*3600000);
+ for(let attempt=0;attempt<16;attempt++){
+  const get=durableGet(step,'settlement-observation-'+attempt);let resolution;
+  try{const j=await get('https://data-api.polymarket.com/v2/resolutions?condition='+job.conditionId);resolution=j.data?.find(r=>r.condition_id===job.conditionId&&r.status==='resolved'&&Number.isFinite(Date.parse(r.resolved_at))&&Date.parse(r.resolved_at)<=Date.now()&&Array.isArray(r.payouts)&&r.payouts.length>=2&&r.payouts.every(x=>Number.isFinite(x)&&x>=0&&x<=1e6)&&r.payouts.reduce((s,x)=>s+x,0)===1e6);}catch{}
+  if(resolution){await step.do('save-market-settlement',()=>env.CACHE.put(settlementKey(job.conditionId),JSON.stringify({conditionId:job.conditionId,status:'resolved',resolvedAt:resolution.resolved_at,payouts:resolution.payouts,observedAt:Date.now(),source:'Polymarket v2 resolution'})));return{settled:true};}
+  if(attempt<15)await step.sleep('wait-for-resolution-'+attempt,'12 hours');
+ }
+ return{settled:false,reason:'Resolution unavailable after bounded retries; paper return remains unknown'};
 }

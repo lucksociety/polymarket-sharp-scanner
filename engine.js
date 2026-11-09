@@ -38,14 +38,14 @@
         costKnown,conv:costBook>0&&remainingCost!==null?remainingCost/costBook:0};
     });
   }
-  function topConviction(rows,{now=Date.now(),limit=8,minBook=25000}={}) {
+  function topConviction(rows,{now=Date.now(),limit=8,minBook=25000,uniqueGames=false}={}) {
     const best=new Map();
     for(const p of rows){
       if(!p.isGame||!Number.isFinite(p.game)||p.game<=now||!(p.netShares>0)||p.costKnown===false||!(p.costBook>=minBook)||!Number.isFinite(p.conv))continue;
       const k=(p.wallet||p.trader)+'|'+p.conditionId;
       if(!best.has(k)||best.get(k).conv<p.conv)best.set(k,p);
     }
-    return [...best.values()].sort((a,b)=>b.conv-a.conv).slice(0,limit);
+    const seen=new Set();return [...best.values()].sort((a,b)=>b.conv-a.conv).filter(p=>{if(!uniqueGames)return true;const k=(p.eventSlug||p.conditionId).replace(/-more-markets$/,'');if(seen.has(k))return false;seen.add(k);return true}).slice(0,limit);
   }
   function recentFlow(p,activity,now,minutes=120) {
     const from=now-minutes*60000;
@@ -53,6 +53,7 @@
     const buys=rows.filter(a=>a.side==='BUY');
     const buy=buys.reduce((s,a)=>s+(+a.size||0),0),sell=rows.filter(a=>a.side==='SELL').reduce((s,a)=>s+(+a.size||0),0);
     return {buy,sell,net:buy-sell,lastBuy:buys.length?Math.max(...buys.map(a=>a.timestamp*1000)):null,
+      netBuyValue:buy>0?(buy-sell)*buys.reduce((s,a)=>s+(+a.size||0)*(+a.price||0),0)/buy:0,
       fresh:buy>sell&&buy>0,latestBuyPrice:buys.sort((a,b)=>b.timestamp-a.timestamp)[0]?.price??null};
   }
   function validateEvidence(input) {
@@ -83,17 +84,18 @@
     const rs=history.filter(r=>r.wallet.toLowerCase()===wallet.toLowerCase()&&r.sport===sport&&Date.parse(r.settledAt)<asOf&&Date.parse(r.entryAt)<asOf&&r.costsIncluded);
     const games=new Map();
     for(const r of rs) {
-      const g=games.get(r.eventId)||{stake:0,pnl:0,clv:0,first:Infinity,last:0};
+      const g=games.get(r.eventId.replace(/-more-markets$/,''))||{stake:0,pnl:0,clv:0,first:Infinity,last:0,time:0};
       g.stake+=+r.stake;g.pnl+=+r.pnlNet;g.clv+=(r.closingProbability-r.entryAllIn)*r.stake;
-      g.first=Math.min(g.first,Date.parse(r.entryAt));g.last=Math.max(g.last,Date.parse(r.settledAt));games.set(r.eventId,g);
+      g.first=Math.min(g.first,Date.parse(r.entryAt));g.last=Math.max(g.last,Date.parse(r.settledAt));g.time=Math.max(g.time,number(r.gameAt)?+r.gameAt:Date.parse(r.settledAt));games.set(r.eventId.replace(/-more-markets$/,''),g);
     }
     const gs=[...games.values()],stake=gs.reduce((s,g)=>s+g.stake,0),pnl=gs.reduce((s,g)=>s+g.pnl,0);
     const clv=stake?gs.reduce((s,g)=>s+g.clv,0)/stake:null;
-    const span=gs.length?(Math.max(...gs.map(g=>g.last))-Math.min(...gs.map(g=>g.first)))/864e5:0;
+    const span=gs.length?(Math.max(...gs.map(g=>g.time))-Math.min(...gs.map(g=>g.time)))/864e5:0;
     const largestWin=gs.length?Math.max(0,...gs.map(g=>g.pnl)):0;
     const qualified=gs.length>=minGames&&span>=90&&pnl>0&&clv>0&&pnl-largestWin>0;
+    const recent=gs.filter(g=>g.time>=asOf-30*864e5),recentPnl=recent.reduce((s,g)=>s+g.pnl,0);
     const modeled=rs.some(r=>r.model===true);
-    return {games:gs.length,stake,pnl,roi:stake?pnl/stake:null,clv,span,qualified,modeled,
+    return {games:gs.length,stake,pnl,roi:stake?pnl/stake:null,clv,span,qualified,modeled,recentGames:recent.length,recentPnl,
       label:qualified?(modeled?'Model-qualified':'Evidence-qualified'):gs.length?'Insufficient evidence':'Unverified',weight:qualified?clamp(gs.length/200,.5,1):0};
   }
   function benchmark(p,odds,now,{maxAge=15*60000,buffer=.02,minBooks=2}={}) {
@@ -119,7 +121,7 @@
     if(!number(price))return {known:false,books:0,reason:'Executable quote required for model price bucket'};
     const rows=history.filter(r=>r.model===true&&r.wallet.toLowerCase()===p.wallet.toLowerCase()&&r.sport===p.sport&&Date.parse(r.settledAt)<now&&Date.parse(r.entryAt)<now&&
       Math.abs(r.entryAllIn-price)<=.1&&(r.payout===0||r.payout===1));
-    const games=new Map();for(const r of rows)if(!games.has(r.eventId))games.set(r.eventId,r);
+    const games=new Map();for(const r of rows){const k=r.eventId.replace(/-more-markets$/,'');if(!games.has(k))games.set(k,r);}
     const rs=[...games.values()],n=rs.length;
     if(n<minGames)return {known:false,books:0,model:true,reason:`Polymarket model needs ${minGames} prior games within ±10¢ of this entry price (${n} available)`};
     const wins=rs.reduce((s,r)=>s+r.payout,0),fair=wins/n,z=1.96;
@@ -155,16 +157,18 @@
       bestAsk:+asks[0].price,worst,slippage:cost/shares-asks[0].price,
       spread:bids.length?+asks[0].price-Math.max(...bids):null,fee:fp,bookAt:stamp,reason:filled?'':'Insufficient depth for full budget'};
   }
-  function consensus(rows,evidence,asOf,{minGames=100}={}) {
+  function consensus(rows,evidence,asOf,{minGames=100,minRecentGames=0,minValue=0,minCostShare=0}={}) {
     const markets=new Map();
     for(const p of rows) {
       if(!p.conditionId||p.outcomeIndex===999||!p.costKnown||!(p.netShares>0))continue;
       const q=quality(p.wallet,p.sport,evidence.history,asOf,minGames);
       const cluster=evidence.clusters[p.wallet.toLowerCase()]||p.wallet.toLowerCase();
       const sides=markets.get(p.conditionId)||new Map(),side=sides.get(p.outcomeIndex)||new Map();
-      const weight=q.weight*Math.min(.1,p.conv)/.1;
+      const material=(p.currentValue??Infinity)>=minValue&&p.conv>=minCostShare;
+      const qualified=q.qualified&&material&&q.recentGames>=minRecentGames&&(minRecentGames===0||q.recentPnl>0);
+      const weight=(qualified?q.weight:0)*Math.min(.1,p.conv)/.1;
       const prev=side.get(cluster);
-      if(!prev||prev.weight<weight)side.set(cluster,{wallet:p.wallet,trader:p.trader,weight,qualified:q.qualified,conv:p.conv});
+      if(!prev||prev.weight<weight)side.set(cluster,{wallet:p.wallet,trader:p.trader,weight,qualified,material,conv:p.conv});
       sides.set(p.outcomeIndex,side);markets.set(p.conditionId,sides);
     }
     const out=new Map();
@@ -186,7 +190,11 @@
     if(!p.isGame||p.game<=now)reasons.push('Upcoming games only');
     if(!p.costKnown||!(p.netShares>0))reasons.push('No verified net directional exposure');
     if(!q.qualified)reasons.push(q.label);
+    if(settings.minRecentGames>0&&(q.recentGames<settings.minRecentGames||q.recentPnl<=0))reasons.push('Recent sport record insufficient or unprofitable');
     if(!flow.fresh)reasons.push('No recent net buying');
+    if(settings.minNetBuyUsd>0&&flow.netBuyValue<Math.max(settings.minNetBuyUsd,(p.remainingCost||0)*(settings.minAdditionFraction||0)))reasons.push('Recent addition too small');
+    if(settings.requireUnopposed&&cons?.opponents?.some(o=>o.material))reasons.push('Material opposing exposure present');
+    if(ex.known&&Number.isFinite(settings.maxChase)&&(!number(flow.latestBuyPrice)||ex.bestAsk-flow.latestBuyPrice>settings.maxChase))reasons.push('Entry price moved beyond allowed chase');
     if(!cons||cons.qualified<settings.minSharps||cons.netWeight<=0)reasons.push('Insufficient net qualified support');
     if(cons?.opposingQualified>settings.maxOpposition)reasons.push('Qualified opposition exceeds limit');
     if(!b.known)reasons.push(b.reason);

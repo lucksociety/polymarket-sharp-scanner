@@ -2,11 +2,12 @@
 'use strict';
 const EdgeUI=(()=>{
   const E=SharpEngine,CLOB='https://clob.polymarket.com';
-  const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03};
+  const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,minRecentGames:20,maxChase:.02,minNetBuyUsd:500,minAdditionFraction:.05,requireUnopposed:true,minValue:1000,minCostShare:.04};
   const empty=()=>({version:1,odds:[],history:[],clusters:{}});
   let storageError='';
   function read(k,fallback){try{return JSON.parse(localStorage.getItem(k))??fallback;}catch(e){storageError='Browser storage unavailable or invalid. Export your work before leaving.';return fallback;}}
   let evidence=empty();try{evidence=E.validateEvidence(read('sharp.evidence.v1',empty()));}catch(e){storageError='Saved evidence rejected: '+e.message;}
+  if(evidence.polymarketBuild?.ready!==true)evidence.history=evidence.history.filter(r=>r.model!==true);
   let paper=read('sharp.paper.v1',[]);if(!Array.isArray(paper))paper=[];
   let settings={...DEFAULTS,benchmarkMode:'polymarket'},quotes=new Map(),assessments=[],busy=false;
   let historyCancelled=false;
@@ -35,7 +36,7 @@ const EdgeUI=(()=>{
     .edge-scroll{overflow:auto}.edge-status{font-size:13px;line-height:1.6;white-space:pre-line;color:var(--muted)}
   </style>`);
   document.querySelector('#playsSec').insertAdjacentHTML('beforebegin',`<section class="edge-panel" id="edgePanel">
-    <div class="panel-heading"><div><span class="eyebrow">02 / THE EDGE ENGINE</span><h2>Find your next play.</h2></div><span class="model-badge">HISTORICAL MODEL</span></div>
+    <div class="panel-heading"><div><span class="eyebrow">02 / THE EDGE ENGINE</span><h2>Model candidates · paper testing.</h2></div><span class="model-badge">HISTORICAL MODEL</span></div>
     <p class="panel-intro">A sharper shortlist starts with the price. Compare executable costs, recent buying, and the evidence behind each position.</p><details class="method-note"><summary>About these estimates</summary><p>The Polymarket-only model uses resolved pregame buys, historical prices, and executable quotes. A shortlist requires sport-specific historical performance, fresh net buying and qualified support. Modeled edge is not an independent sportsbook valuation. Estimates are uncertain. Open cost share excludes cash and external hedges; wallet independence is unknown unless you provide related-wallet groups.</p></details>
     <div class="edge-controls" id="edgeSettings">
       <label>Probability source<select id="edge-benchmarkMode"><option value="polymarket">Polymarket historical model</option><option value="independent">Independent odds (optional import)</option></select></label>
@@ -88,7 +89,9 @@ const EdgeUI=(()=>{
         (a.reasons.length<prev.reasons.length||a.reasons.length===prev.reasons.length&&(a.roi??-Infinity)>(prev.roi??-Infinity)||
          a.reasons.length===prev.reasons.length&&a.roi===prev.roi&&p.conv>prev.p.conv))byKey.set(k,a);
     }
-    return [...byKey.values()].sort((a,b)=>+b.eligible-+a.eligible||(b.roi??-Infinity)-(a.roi??-Infinity)||(b.cons?.qualified||0)-(a.cons?.qualified||0)||b.p.conv-a.p.conv);
+    const sorted=[...byKey.values()].sort((a,b)=>+b.eligible-+a.eligible||(b.roi??-Infinity)-(a.roi??-Infinity)||(b.cons?.qualified||0)-(a.cons?.qualified||0)||b.p.conv-a.p.conv),games=new Set();
+    for(const a of sorted)if(a.eligible){const k=(a.p.eventSlug||a.p.conditionId).replace(/-more-markets$/,'');if(games.has(k)){a.eligible=false;a.reasons.push('Another candidate selected for this game');}else games.add(k);}
+    return sorted;
   }
   function render(){
     assessments=candidates();
@@ -197,8 +200,8 @@ const EdgeUI=(()=>{
     try{
       const result=await PolymarketHistory.build({traders:TRADERS,get:url=>{if(historyCancelled)throw Error('Canceled');return getJSON(url);},pool,data:DATA,gamma:GAMMA,feeRate:Number(fee.value)/100,maxPages:Number(pages.value),onProgress:t=>{message=t;document.querySelector('#edgeStatus').textContent=t;}});
       if(historyCancelled)throw Error('History build stopped; previous saved history retained.');
-      evidence={...evidence,history:[...evidence.history.filter(r=>!r.model),...result.records],polymarketBuild:{...result,records:undefined}};
-      save('sharp.evidence.v1',evidence);message=`Polymarket history: ${result.counts.records} modeled entries, ${result.counts.activity} trades read, ${result.counts.failedWallets} failed wallets. `+result.warnings.slice(0,8).join(' · ');
+      evidence={...evidence,history:[...evidence.history.filter(r=>!r.model),...(result.ready?result.records:[])],polymarketBuild:{...result,records:undefined}};
+      save('sharp.evidence.v1',evidence);message=`Polymarket history: ${result.counts.records} modeled entries (${result.ready?'complete cohort':'incomplete cohort; excluded from qualification'}), ${result.counts.activity} trades read, ${result.counts.failedWallets} failed wallets. `+result.warnings.slice(0,8).join(' · ');
     }finally{button.disabled=false;stop.disabled=true;render();}
   }));
   document.querySelector('#history-stop').addEventListener('click',()=>{historyCancelled=true;message='Stopping after active requests finish…';render();});

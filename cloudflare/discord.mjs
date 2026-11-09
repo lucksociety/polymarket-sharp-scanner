@@ -31,7 +31,7 @@ export async function dashboardScan(request,env,now=Date.now()){
 }
 export async function handle(request,env){
  const url=new URL(request.url);
- if(request.method==='GET'&&url.pathname==='/health')return json({ok:true,command:'polysharp',ready:Boolean(env.SCANS&&env.CACHE),dashboardRelay:Boolean(env.DASHBOARD_WEBHOOK_URL)});
+ if(request.method==='GET'&&url.pathname==='/health')return json({ok:true,command:'polysharp',ready:Boolean(env.SCANS&&env.CACHE),mode:'paper',signalJournal:true,dashboardRelay:Boolean(env.DASHBOARD_WEBHOOK_URL)});
  if(url.pathname==='/scan')return dashboardScan(request,env);
  if(request.method!=='POST'||url.pathname!=='/interactions')return new Response('Not found',{status:404});
  if(Number(request.headers.get('Content-Length'))>65536)return new Response('Too large',{status:413});
@@ -48,7 +48,7 @@ export async function handle(request,env){
  if(!env.SCANS||!env.CACHE)return ephemeral('Polysharp is being configured. The background scanner is not ready yet.');
  const receivedAt=Date.now(),id=`${name==='predictions'?'pred':'scan'}-${interaction.guild_id}-${Math.floor(receivedAt/60000)}`;
  try{
-  await env.SCANS.create({id,params:{applicationId:interaction.application_id,token:interaction.token,interactionId:interaction.id,guildId:interaction.guild_id,receivedAt,options}});
+  await env.SCANS.create({id,params:{applicationId:interaction.application_id,token:interaction.token,interactionId:interaction.id,guildId:interaction.guild_id,channelId:interaction.channel_id||null,receivedAt,options}});
   // Public deferred response; the workflow edits this same message, without extra channel posts.
   return json({type:5});
  }catch{
@@ -104,11 +104,11 @@ export async function editReply(job,payload,fetcher=fetch){
  if(job.source==='dashboard'){
   // Dashboard-triggered scans post one new message to the configured channel webhook.
   const r=await fetcher(job.webhook+'?wait=true',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,content:payload.content||'☘ Triggered from the dashboard SCAN button',allowed_mentions:{parse:[]}}),signal:AbortSignal.timeout(15000)});
-  if(!r.ok){await r.body?.cancel();throw Error('Discord webhook HTTP '+r.status);}await r.body?.cancel();return {delivered:true};
+  if(!r.ok){await r.body?.cancel();throw Error('Discord webhook HTTP '+r.status);}let message;try{message=await r.json();}catch{}return {delivered:true,messageId:message?.id||null,channelId:message?.channel_id||null};
  }
  const url=`https://discord.com/api/v10/webhooks/${job.applicationId}/${encodeURIComponent(job.token)}/messages/@original`;
  const r=await fetcher(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
- if(!r.ok){await r.body?.cancel();throw Error('Discord response HTTP '+r.status);}await r.body?.cancel();return {delivered:true};
+ if(!r.ok){await r.body?.cancel();throw Error('Discord response HTTP '+r.status);}let message;try{message=await r.json();}catch{}return {delivered:true,messageId:message?.id||null,channelId:message?.channel_id||null};
 }
 export async function register(token,fetcher=fetch,definition=command,applicationId=APPLICATION_ID){
  const r=await fetcher(`https://discord.com/api/v10/applications/${applicationId}/commands`,{method:'POST',headers:{Authorization:'Bot '+token,'Content-Type':'application/json'},body:JSON.stringify(definition),signal:AbortSignal.timeout(20000)});

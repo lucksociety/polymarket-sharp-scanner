@@ -52,9 +52,10 @@ test('Polymarket history excludes both-side buys, in-play buys and incomplete cl
  };
  const pool=async(items,n,fn)=>Promise.all(items.map(fn));
  const result=await H.build({traders:[{wallet,name:'A'}],get,pool,data:'https://data.test',gamma:'https://gamma.test',classifySport:()=> 'NBA'});
- assert.equal(result.records.length,1);assert.equal(result.records[0].token,'good');assert.equal(result.counts.missingClose,1);near(result.records[0].entryAllIn,.5125);
+ assert.equal(result.records.length,1);assert.equal(result.records[0].token,'good');assert.equal(result.counts.missingClose,1);assert.equal(result.ready,false);near(result.records[0].entryAllIn,.5125);
  const broken=await H.build({traders:[{wallet,name:'A'}],get:async()=>{throw Error('HTTP 503');},pool,data:'https://data.test',gamma:'https://gamma.test',classifySport:()=> 'NBA'});
- assert.equal(broken.records.length,0);assert.equal(broken.counts.failedWallets,1);
+ assert.equal(broken.records.length,0);assert.equal(broken.counts.failedWallets,1);assert.equal(broken.ready,false);
+ const complete=await H.build({traders:[{wallet,name:'A'}],get:async url=>{const j=await get(url);if(new URL(url).pathname==='/v2/prices-history')j.data.forEach(p=>p.resolution_seconds=0);return j;},pool,data:'https://data.test',gamma:'https://gamma.test',classifySport:()=> 'NBA'});assert.equal(complete.ready,true);
 });
 test('forward replay uses frozen evidence and reproduces settlement P&L without future results',()=>{
  const {replay}=require('./replay.js');
@@ -79,3 +80,5 @@ test('dashboard top conviction ranks concentration independently of edge and ret
  const rows=[base,{...base,conv:.1,outcomeIndex:1},{...base,wallet:'b',conv:.3},{...base,wallet:'small',costBook:24000,conv:.9},{...base,wallet:'past',game:now-1,conv:.99},{...base,wallet:'hedge',netShares:0,conv:.99},{...base,wallet:'unknown',costKnown:false,conv:.99}];
  const top=E.topConviction(rows,{now,limit:5});assert.deepEqual(top.map(p=>p.wallet),['b','a']);assert.deepEqual(top.map(p=>p.conv),[.3,.2]);
 });
+test('watched cards can collapse alternate markets and opposite wallets to one game',()=>{const a={...p,costBook:100000,remainingCost:10000,conv:.1,eventSlug:'nba-a-b'},b={...a,wallet:'b',conditionId:'other',eventSlug:'nba-a-b-more-markets',conv:.2};assert.equal(E.topConviction([a,b],{now,uniqueGames:true}).length,1);assert.equal(E.topConviction([a,b],{now,uniqueGames:true})[0].wallet,'b');});
+test('long holding periods do not masquerade as months of repeated game performance',()=>{const sameWeek=history().map(r=>({...r,entryAt:new Date(now-200*864e5).toISOString(),settledAt:new Date(now-864e5).toISOString(),gameAt:now-2*864e5}));const q=E.quality(wallet,'NBA',sameWeek,now);assert.equal(q.qualified,false);assert.equal(q.span,0);});

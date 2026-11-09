@@ -3,7 +3,7 @@
 const PolymarketHistory={
   async build({traders,get,pool,data,gamma,feeRate=.05,maxPages=100,asOf=Date.now(),classifySport=classify,onProgress=()=>{}}){
     const now=asOf,start=Math.floor(now/1000)-180*86400,end=Math.floor(now/1000);
-    const warnings=[],counts={traders:0,activity:0,candidates:0,records:0,missingClose:0,failedWallets:0};
+    const warnings=[],counts={traders:0,activity:0,candidates:0,records:0,missingClose:0,failedWallets:0,metadataErrors:0,metadataMissing:0,resolutionErrors:0,priceErrors:0,resolved:0};
     const cohorts=await pool(traders,2,async t=>{
       try{
         const rows=await SharpEngine.pages(get,`${data}/v2/activity?user=${t.wallet}&type=TRADE&start=${start}&end=${end}&sort_direction=ASC&limit=1000`,{maxPages});
@@ -24,10 +24,11 @@ const PolymarketHistory={
     const chunks=[];for(let i=0;i<slugs.length;i+=40)chunks.push(slugs.slice(i,i+40));
     await pool(chunks,2,async chunk=>{
       try{const es=await get(`${gamma}/events?${chunk.map(s=>'slug='+encodeURIComponent(s)).join('&')}&limit=100`);for(const e of es)events.set(e.slug,e);}
-      catch(e){warnings.push('Historical event metadata unavailable: '+e.message);}
+      catch(e){counts.metadataErrors++;warnings.push('Historical event metadata unavailable: '+e.message);}
     });
     const valid=candidates.map(a=>{
       const event=events.get(a.event_slug),market=event?.markets?.find(m=>m.conditionId===a.condition_id);
+      if(!event)counts.metadataMissing++;
       const game=market?.gameStartTime?Date.parse(market.gameStartTime):NaN;
       if(!Number.isFinite(game)||a.timestamp*1000>=game||game>=now)return null;
       const sport=classifySport((event.tags||[]).map(t=>t.slug),event.slug);
@@ -38,10 +39,11 @@ const PolymarketHistory={
     const condChunks=[];for(let i=0;i<conditions.length;i+=20)condChunks.push(conditions.slice(i,i+20));
     await pool(condChunks,2,async chunk=>{
       try{const result=await get(`${data}/v2/resolutions?condition=${chunk.join(',')}`);for(const r of result.data||[])if(r.status==='resolved'&&Array.isArray(r.payouts)&&r.resolved_at)resolutions.set(r.condition_id,r);}
-      catch(e){warnings.push('Historical resolution request failed: '+e.message);}
+      catch(e){counts.resolutionErrors++;warnings.push('Historical resolution request failed: '+e.message);}
     });
     const closeCache=new Map();
     const resolved=valid.filter(a=>{const r=resolutions.get(a.condition_id);return r&&Date.parse(r.resolved_at)<=now&&(r.payouts[a.outcome_index]===0||r.payouts[a.outcome_index]===1000000);});
+    counts.resolved=resolved.length;
     let done=0;
     const records=await pool(resolved,3,async a=>{
       try{
@@ -56,17 +58,18 @@ const PolymarketHistory={
         const entryAllIn=a.price+feeRate*a.price*(1-a.price);
         // Fixed $100 hypothetical entries prevent whale size from dominating performance.
         const stake=100,pnlNet=stake*(payout/entryAllIn-1);
-        return {wallet:a.wallet,sport:a.sport,eventId:a.event_slug||a.condition_id,source:'Polymarket v2 observed buy + resolution + pregame price',
+        return {wallet:a.wallet,sport:a.sport,eventId:(a.event_slug||a.condition_id).replace(/-more-markets$/,''),source:'Polymarket v2 observed buy + resolution + pregame price',
           entryAt:new Date(a.timestamp*1000).toISOString(),settledAt:r.resolved_at,stake,pnlNet,entryAllIn,closingProbability:close.price,costsIncluded:true,
           model:true,payout,entryPrice:a.price,feeAssumption:feeRate,gameAt:a.game,conditionId:a.condition_id,token:a.token_id,
           tradeHash:a.transaction_hash,closingPoint:close,resolution:r,
           assumptions:'First observed BUY within 180-day window; hold to resolution at trader price; hypothetical fixed $100; assumed fee curve rate p(1-p). Not actual wallet profit or a historical copier fill.'};
-      }catch(e){warnings.push('Historical price unavailable for '+a.token_id+': '+e.message);return null;}
+      }catch(e){counts.priceErrors++;warnings.push('Historical price unavailable for '+a.token_id+': '+e.message);return null;}
       finally{done++;onProgress(`History: pricing ${done}/${resolved.length} resolved pregame entries`);}
     });
     counts.records=records.filter(Boolean).length;
     if(counts.missingClose)warnings.push(`${counts.missingClose} entries excluded: no strictly pregame closing observation within 15 minutes. Older fine-grained prices may be outside retention.`);
-    return {records:records.filter(Boolean),warnings,counts,builtAt:now,windowStart:start*1000,feeRate};
+    const ready=counts.failedWallets===0&&counts.metadataErrors===0&&counts.metadataMissing===0&&counts.resolutionErrors===0&&counts.priceErrors===0&&counts.resolved>0&&counts.records===counts.resolved;
+    return {records:records.filter(Boolean),ready,warnings,counts,builtAt:now,windowStart:start*1000,feeRate};
   }
 };
 if(typeof module!=='undefined')module.exports=PolymarketHistory;
