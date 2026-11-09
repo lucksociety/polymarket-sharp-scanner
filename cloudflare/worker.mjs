@@ -119,13 +119,15 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    if(job.source!=='dashboard'&&job.source!=='verification')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':'tracked sports'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
    const {evidence,missing,manifest}=predictions?{evidence:{history:[],clusters:{}},missing:[],manifest:[]}:await loadEvidence(step,this.env,traders,job.receivedAt);
    const historyPending=!predictions?await warmHistory(step,this.env,missing,job.receivedAt):0;
-   const walletJobs=traders.map((t,i)=>({id:'wallet-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*2500}}));
+   const walletIds=new Map();
+   const walletJobs=await Promise.all(traders.map(async(t,i)=>{const id='wallet-'+await digest(event.instanceId+'|'+t.wallet);walletIds.set(t.wallet,id);return{id,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*2500}}}));
    await launchBatch(step,this.env,'launch-wallets',walletJobs);
    const walletData=new Map(),retry=[];
-   await pool(traders,3,async t=>{try{walletData.set(t.wallet,await result(step,this.env,'wallet-'+event.instanceId+'-'+t.wallet,deadline));}catch{retry.push(t);}});
-   const retryJobs=retry.map((t,i)=>({id:'retry-'+event.instanceId+'-'+t.wallet,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*3000}}));
+   await pool(traders,3,async t=>{try{walletData.set(t.wallet,await result(step,this.env,walletIds.get(t.wallet),deadline));}catch{retry.push(t);}});
+   const retryIds=new Map();
+   const retryJobs=await Promise.all(retry.map(async(t,i)=>{const id='retry-'+await digest(event.instanceId+'|'+t.wallet);retryIds.set(t.wallet,id);return{id,params:{kind:'wallet',predictions,trader:t,asOf:job.receivedAt,delay:1000+i*3000}}}));
    await launchBatch(step,this.env,'retry-missing-wallets',retryJobs);
-   await pool(retry,3,async t=>{try{walletData.set(t.wallet,await result(step,this.env,'retry-'+event.instanceId+'-'+t.wallet,deadline));}catch{}});
+   await pool(retry,3,async t=>{try{walletData.set(t.wallet,await result(step,this.env,retryIds.get(t.wallet),deadline));}catch{}});
    if(predictions){
     if(walletData.size<traders.length)warnings.push('Some wallets could not be loaded');
     const loaded=[...walletData.values()];
