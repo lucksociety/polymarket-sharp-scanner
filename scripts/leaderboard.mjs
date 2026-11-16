@@ -5,7 +5,7 @@ import { CORE, classify } from '../cloudflare/roster.mjs';
 import { walletRecord, rank, RULES, POLICY } from './leaderboard-stats.mjs';
 
 const DATA = 'https://data-api.polymarket.com', GAMMA = 'https://gamma-api.polymarket.com';
-const WINDOW_DAYS = 180, MAX_PAGES = +process.env.MAX_PAGES || 60, MAX_WALLETS = +process.env.MAX_WALLETS || 400;
+const WINDOW_DAYS = 180, MAX_PAGES = +process.env.MAX_PAGES || 40, MAX_WALLETS = +process.env.MAX_WALLETS || 400;
 const now = Date.now(), start = Math.floor(now / 1000) - WINDOW_DAYS * 86400, end = Math.floor(now / 1000);
 const warnings = [], counts = { requests: 0, retries: 0 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -47,7 +47,7 @@ async function discover() {
       const lb = await get(`${DATA}/v2/leaderboard?category=${category}&time_period=${period}&sort_by=PNL&limit=${limit}`, 2);
       if (!Array.isArray(lb.data)) throw Error('invalid leaderboard');
       let added = 0;
-      for (const row of lb.data) { const w = String(row.user_id || '').toLowerCase(); if (!/^0x[0-9a-f]{40}$/.test(w) || known.has(w)) continue; known.set(w, { name: String(row.user_name || w.slice(0, 6) + '…' + w.slice(-4)).slice(0, 40), wallet: w, source: `${category} ${period} leaderboard` }); added++; }
+      for (const row of lb.data) { const w = String(row.user_id || '').toLowerCase(); if (!/^0x[0-9a-f]{40}$/.test(w) || known.has(w)) continue; known.set(w, { name: /^0x[0-9a-f]{20,}/i.test(row.user_name || '0x' + '0'.repeat(20)) ? w.slice(0, 6) + '…' + w.slice(-4) : String(row.user_name).slice(0, 40), wallet: w, source: `${category} ${period} leaderboard` }); added++; }
       console.log(`discovery ${category}/${period}: ${lb.data.length} rows, ${added} new`);
     } catch (e) { warnings.push(`Leaderboard ${category}/${period} unavailable: ${e.message}`); }
   }
@@ -59,7 +59,7 @@ console.log(`scoring ${wallets.length} wallets (${CORE.length} from the existing
 
 // 1) trades -> pre-game positions per wallet
 let done = 0;
-const perWallet = await pool(wallets, 4, async (t) => {
+const perWallet = await pool(wallets, 8, async (t) => {
   try {
     const { rows, truncated } = await trades(t.wallet);
     const pos = new Map(), sides = new Map();
@@ -79,7 +79,7 @@ const slugs = [...new Set(perWallet.flatMap((w) => w.positions.map((p) => p.slug
 console.log(`${slugs.length} events to look up`);
 const chunk = (xs, n) => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
 let metaErrors = 0;
-await pool(chunk(slugs, 25), 4, async (c) => {
+await pool(chunk(slugs, 25), 8, async (c) => {
   try { for (const e of await get(`${GAMMA}/events?${c.map((s) => 'slug=' + encodeURIComponent(s)).join('&')}&limit=100`)) events.set(e.slug, { sport: classify((e.tags || []).map((t) => t.slug), e.slug), markets: new Map((e.markets || []).filter((m) => m.gameStartTime).map((m) => [m.conditionId, Date.parse(m.gameStartTime)])) }); }
   catch (e) { metaErrors++; }
 });
@@ -100,7 +100,7 @@ for (const w of perWallet) {
 const conditions = [...new Set(perWallet.flatMap((w) => w.pregame.filter((p) => p.game < now).map((p) => p.condition)))], payouts = new Map();
 console.log(`${conditions.length} markets to settle`);
 let resErrors = 0;
-await pool(chunk(conditions, 20), 4, async (c) => {
+await pool(chunk(conditions, 20), 8, async (c) => {
   try { const r = await get(`${DATA}/v2/resolutions?condition=${c.join(',')}`); for (const x of r.data || []) if (x.status === 'resolved' && Array.isArray(x.payouts)) payouts.set(x.condition_id, x.payouts); }
   catch (e) { resErrors++; }
 });
@@ -126,7 +126,7 @@ const tidy = (r) => ({ rank: r.rank ?? null, name: r.name, wallet: r.wallet, sou
   medianStake: round(r.medianStake, 2), typicalBets: r.typicalBets, lastBuyAt: r.lastBuyAt, truncated: !!r.truncated,
   bySport: Object.fromEntries(Object.entries(r.bySport || {}).map(([k, s]) => [k, { games: s.games, wins: s.wins, winRate: round(s.winRate), avgPrice: round(s.avgPrice), edge: round(s.edge), roi: round(s.roi) }])) });
 const out = { version: 1, policy: POLICY, generatedAt: new Date(now).toISOString(), windowDays: WINDOW_DAYS, rules: RULES,
-  method: 'One bet per game: the wallet\'s largest pre-game position, bought on one side only, held to the result. Edge = win rate minus the all-in price paid (assumed fee 0.05·p·(1−p)). Ranked by the conservative (one-sided 95%) edge. To be listed a wallet needs 50+ settled bets over 30+ days, a bet in the last 21 days, and to be ahead in both the older and newer half of its record. "Proven" means the conservative edge is still above zero. Retrospective; not proof of future profit.',
+  method: 'One bet per game: the wallet\'s largest pre-game position, bought on one side only, held to the result. Edge = win rate minus the all-in price paid (assumed fee 0.05·p·(1−p)). Ranked by the conservative (one-sided 95%) edge. To be listed a wallet needs 50+ settled bets over 30+ days, a bet in the last 21 days, a win rate at least 2 points above price with a positive flat-stake return, and to be ahead in both the older and newer half of its record. "Proven" means the conservative edge is still above zero. Retrospective; not proof of future profit.',
   counts: { wallets: wallets.length, scored: records.length, qualified: records.filter((r) => r.qualified).length, proven: records.filter((r) => r.proven).length, ...counts, events: events.size, settledMarkets: payouts.size },
   warnings, sharps: sharps.map(tidy), others: records.filter((r) => !sharps.includes(r)).sort((a, b) => (b.games >= RULES.minGames) - (a.games >= RULES.minGames) || b.edgeLower - a.edgeLower).map(tidy) };
 if (records.length < wallets.length * 0.8 || !payouts.size) { console.error('Too much data missing; leaderboard not written.', JSON.stringify(out.counts), warnings.slice(0, 5)); process.exit(1); }

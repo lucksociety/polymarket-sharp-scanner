@@ -1,7 +1,7 @@
 // Pure scoring for the bettor leaderboard. No network access; unit tested.
 // A "bet" is one game: the wallet's largest pre-game position in that game, bought on one side only.
 export const POLICY = 'edge-over-price-v1';
-export const RULES = { minGames: 50, minSpanDays: 30, maxIdleDays: 21, z: 1.645, feeRate: 0.05, topN: 30 };
+export const RULES = { minGames: 50, minSpanDays: 30, maxIdleDays: 21, minEdge: 0.02, z: 1.645, feeRate: 0.05, topN: 30 };
 const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 export const median = (xs) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const allIn = (p, fee) => p + fee * p * (1 - p);
@@ -36,7 +36,7 @@ export function walletRecord({ bets, stakes, lastBuyAt }, now, rules = RULES) {
   if (!(overall.games >= rules.minGames)) reasons.push(`fewer than ${rules.minGames} settled pre-game bets`);
   else {
     if (overall.spanDays < rules.minSpanDays) reasons.push(`record spans under ${rules.minSpanDays} days`);
-    if (!(overall.edge > 0)) reasons.push('win rate is not above the price paid');
+    if (!(overall.edge >= rules.minEdge && overall.roi > 0)) reasons.push(`win rate is not at least ${Math.round(100 * rules.minEdge)} points above the price paid`);
     else if (!(older.edge > 0 && newer.edge > 0)) reasons.push('not ahead in both halves of the record');
   }
   if (!lastBuyAt || now - lastBuyAt > rules.maxIdleDays * 864e5) reasons.push(`no pre-game bet in ${rules.maxIdleDays} days`);

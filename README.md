@@ -109,7 +109,7 @@ The existing visual style, roster editing in `index.html` and GitHub Pages deplo
 
 - **One bet per game:** the wallet's largest pre-game position in that game, bought on one side only, held to the result. Unsettled, void and split results are left out.
 - **Edge over price:** win rate minus the all-in price paid (assumed fee `0.05·p·(1−p)`). Raw win rate is shown but not ranked on, because buying heavy favourites wins often and can still lose money.
-- **Listing rules:** 50+ settled bets over 30+ days, a pre-game bet in the last 21 days, win rate above price overall and in both the older and newer half of the record. Ranked by the conservative (one-sided 95%) edge; the top 30 are listed. `proven` marks wallets whose conservative edge is still above zero.
+- **Listing rules:** 50+ settled bets over 30+ days, a pre-game bet in the last 21 days, win rate at least 2 points above price with a positive flat-stake return, and ahead in both the older and newer half of the record. Ranked by the conservative (one-sided 95%) edge; the top 30 are listed. `proven` marks wallets whose conservative edge is still above zero.
 - **Usual bet:** the median pre-game stake per position (stakes under $10 ignored). `/polysharp` compares each open bet with this.
 
 The record is retrospective and picked from a few hundred wallets, so some listed bettors will have been lucky. The forward paper log is the test.

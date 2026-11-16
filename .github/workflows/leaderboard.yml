@@ -4,7 +4,8 @@ on:
     - cron: '17 9 * * *'   # daily, 4:17am Eastern
   workflow_dispatch:
   push:
-    branches: [leaderboard]
+    branches: [main]
+    paths: ['scripts/leaderboard*.mjs', '.github/workflows/leaderboard.yml']
 permissions:
   contents: write
 concurrency:
@@ -21,8 +22,6 @@ jobs:
           node-version: '22'
       - run: node --test scripts/leaderboard-stats.test.mjs
       - name: Score wallets on their last 180 days of pre-game sports bets
-        env:
-          MAX_WALLETS: ${{ github.ref_name == 'leaderboard' && '400' || '400' }}
         run: node scripts/leaderboard.mjs
       - name: Publish leaderboard
         if: github.ref_name == 'main'
@@ -31,4 +30,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/leaderboard.json
           git diff --cached --quiet || git commit -m "leaderboard: daily refresh $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull --rebase --autostash origin main
           git push
