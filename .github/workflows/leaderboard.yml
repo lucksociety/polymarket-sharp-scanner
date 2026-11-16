@@ -22,7 +22,7 @@ jobs:
       - run: node --test scripts/leaderboard-stats.test.mjs
       - name: Score wallets on their last 180 days of pre-game sports bets
         env:
-          MAX_WALLETS: ${{ github.ref_name == 'leaderboard' && '12' || '400' }}
+          MAX_WALLETS: ${{ github.ref_name == 'leaderboard' && '400' || '400' }}
         run: node scripts/leaderboard.mjs
       - name: Publish leaderboard
         if: github.ref_name == 'main'

@@ -12,7 +12,9 @@ test('edge is win rate minus the all-in price, not raw win rate', () => {
 test('median stake', () => { assert.equal(median([1, 9, 5]), 5); assert.equal(median([1, 3]), 2); assert.equal(median([]), null); });
 test('qualification needs sample, both halves, recency', () => {
   const good = walletRecord({ bets: bets(120, 78, 0.5), stakes: [100, 200, 300], lastBuyAt: now - day }, now);
-  assert.equal(good.qualified, true); assert.equal(good.medianStake, 200);
+  assert.equal(good.qualified, true); assert.equal(good.proven, true); assert.equal(good.medianStake, 200);
+  const thin = walletRecord({ bets: bets(100, 53, 0.5), stakes: [1], lastBuyAt: now }, now);
+  assert.equal(thin.qualified, true); assert.equal(thin.proven, false);              // ahead, but could be luck
   assert.equal(walletRecord({ bets: bets(30, 25, 0.5), stakes: [1], lastBuyAt: now }, now).qualified, false);
   assert.equal(walletRecord({ bets: bets(120, 78, 0.5), stakes: [1], lastBuyAt: now - 40 * day }, now).qualified, false);
   // great first half, losing second half

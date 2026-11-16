@@ -115,25 +115,25 @@ const records = perWallet.filter((w) => !w.failed).map((w) => {
     const b = { price: p.price, payout: pay / 1e6, stake: p.stake, gameAt: p.game, sport: p.sport }, prev = byGame.get(p.eventId);
     if (!prev || prev.stake < b.stake) byGame.set(p.eventId, b);       // the wallet's main bet in that game
   }
-  const rec = walletRecord({ bets: [...byGame.values()], stakes: w.pregame.map((p) => p.stake), lastBuyAt: w.pregame.length ? Math.max(...w.pregame.map((p) => p.lastBuy)) : null }, now);
+  const rec = walletRecord({ bets: [...byGame.values()], stakes: w.pregame.map((p) => p.stake).filter((x) => x >= 10), lastBuyAt: w.pregame.length ? Math.max(...w.pregame.map((p) => p.lastBuy)) : null }, now);
   return { name: w.name, wallet: w.wallet, source: w.source, truncated: w.truncated, tradeRows: w.tradeRows, ...rec };
 });
 const sharps = rank(records);
 const round = (x, d = 4) => (Number.isFinite(x) ? +x.toFixed(d) : null);
-const tidy = (r) => ({ rank: r.rank ?? null, name: r.name, wallet: r.wallet, source: r.source, qualified: r.qualified, reasons: r.reasons,
+const tidy = (r) => ({ rank: r.rank ?? null, name: r.name, wallet: r.wallet, source: r.source, qualified: r.qualified, proven: !!r.proven, reasons: r.reasons,
   games: r.games, wins: r.wins ?? 0, losses: r.losses ?? 0, winRate: round(r.winRate), avgPrice: round(r.avgPrice), edge: round(r.edge), edgeLower: round(r.edgeLower),
   roi: round(r.roi), heldPnl: round(r.heldPnl, 0), olderEdge: round(r.olderEdge), newerEdge: round(r.newerEdge), spanDays: round(r.spanDays, 0),
   medianStake: round(r.medianStake, 2), typicalBets: r.typicalBets, lastBuyAt: r.lastBuyAt, truncated: !!r.truncated,
   bySport: Object.fromEntries(Object.entries(r.bySport || {}).map(([k, s]) => [k, { games: s.games, wins: s.wins, winRate: round(s.winRate), avgPrice: round(s.avgPrice), edge: round(s.edge), roi: round(s.roi) }])) });
 const out = { version: 1, policy: POLICY, generatedAt: new Date(now).toISOString(), windowDays: WINDOW_DAYS, rules: RULES,
-  method: 'One bet per game: the wallet\'s largest pre-game position, bought on one side only, held to the result. Edge = win rate minus the all-in price paid (assumed fee 0.05·p·(1−p)). Ranked by the conservative (one-sided 95%) edge. Must also be ahead in both the older and newer half of the record. Retrospective; not proof of future profit.',
-  counts: { wallets: wallets.length, scored: records.length, qualified: records.filter((r) => r.qualified).length, ...counts, events: events.size, settledMarkets: payouts.size },
+  method: 'One bet per game: the wallet\'s largest pre-game position, bought on one side only, held to the result. Edge = win rate minus the all-in price paid (assumed fee 0.05·p·(1−p)). Ranked by the conservative (one-sided 95%) edge. To be listed a wallet needs 50+ settled bets over 30+ days, a bet in the last 21 days, and to be ahead in both the older and newer half of its record. "Proven" means the conservative edge is still above zero. Retrospective; not proof of future profit.',
+  counts: { wallets: wallets.length, scored: records.length, qualified: records.filter((r) => r.qualified).length, proven: records.filter((r) => r.proven).length, ...counts, events: events.size, settledMarkets: payouts.size },
   warnings, sharps: sharps.map(tidy), others: records.filter((r) => !sharps.includes(r)).sort((a, b) => (b.games >= RULES.minGames) - (a.games >= RULES.minGames) || b.edgeLower - a.edgeLower).map(tidy) };
 if (records.length < wallets.length * 0.8 || !payouts.size) { console.error('Too much data missing; leaderboard not written.', JSON.stringify(out.counts), warnings.slice(0, 5)); process.exit(1); }
 fs.mkdirSync('data', { recursive: true });
 fs.writeFileSync('data/leaderboard.json', JSON.stringify(out, null, 1));
 const pct = (x) => (x == null ? '—' : (100 * x).toFixed(1));
 console.log(`\n${out.counts.qualified} of ${records.length} scored wallets qualify. Top ${sharps.length}:`);
-for (const r of out.sharps) console.log(`#${String(r.rank).padStart(2)} ${r.name.padEnd(28)} ${String(r.wins).padStart(3)}-${String(r.losses).padEnd(3)} win ${pct(r.winRate)}% at avg ${pct(r.avgPrice)}¢ | edge +${pct(r.edge)} (low ${pct(r.edgeLower)}) | roi ${pct(r.roi)}% | halves ${pct(r.olderEdge)}/${pct(r.newerEdge)} | median bet $${Math.round(r.medianStake)} | ${r.source}${r.truncated ? ' | truncated' : ''}`);
+for (const r of out.sharps) console.log(`#${String(r.rank).padStart(2)} ${r.name.padEnd(28)} ${String(r.wins).padStart(3)}-${String(r.losses).padEnd(3)} win ${pct(r.winRate)}% at avg ${pct(r.avgPrice)}¢ | edge +${pct(r.edge)} (low ${pct(r.edgeLower)}) | roi ${pct(r.roi)}% | halves ${pct(r.olderEdge)}/${pct(r.newerEdge)} | median bet $${Math.round(r.medianStake)} | ${r.proven ? 'PROVEN' : 'leading'} | ${r.source}${r.truncated ? ' | truncated' : ''}`);
 console.log('\nBest of the rest:'); for (const r of out.others.slice(0, 15)) console.log(`   ${r.name.padEnd(28)} ${r.wins}-${r.losses} win ${pct(r.winRate)}% at ${pct(r.avgPrice)}¢ edge ${pct(r.edge)} (low ${pct(r.edgeLower)}) :: ${r.reasons.join('; ')}`);
 console.log(JSON.stringify(out.counts), warnings.slice(0, 10));

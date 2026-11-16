@@ -36,12 +36,14 @@ export function walletRecord({ bets, stakes, lastBuyAt }, now, rules = RULES) {
   if (!(overall.games >= rules.minGames)) reasons.push(`fewer than ${rules.minGames} settled pre-game bets`);
   else {
     if (overall.spanDays < rules.minSpanDays) reasons.push(`record spans under ${rules.minSpanDays} days`);
-    if (!(overall.edgeLower > 0)) reasons.push('edge over price not clearly above zero');
-    if (!(older.edge > 0 && newer.edge > 0)) reasons.push('not ahead in both halves of the record');
+    if (!(overall.edge > 0)) reasons.push('win rate is not above the price paid');
+    else if (!(older.edge > 0 && newer.edge > 0)) reasons.push('not ahead in both halves of the record');
   }
   if (!lastBuyAt || now - lastBuyAt > rules.maxIdleDays * 864e5) reasons.push(`no pre-game bet in ${rules.maxIdleDays} days`);
   return { ...overall, olderEdge: older.edge ?? null, newerEdge: newer.edge ?? null, bySport,
-    medianStake: median(stakes), typicalBets: stakes.length, lastBuyAt: lastBuyAt || null, qualified: reasons.length === 0, reasons };
+    medianStake: median(stakes), typicalBets: stakes.length, lastBuyAt: lastBuyAt || null, qualified: reasons.length === 0,
+    // "proven": the edge stays above zero even after allowing for luck (one-sided 95%). Otherwise "leading".
+    proven: reasons.length === 0 && overall.edgeLower > 0, reasons };
 }
 
 export function rank(records, rules = RULES) {
