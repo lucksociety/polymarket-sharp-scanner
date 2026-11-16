@@ -1,0 +1,34 @@
+name: Bettor leaderboard
+on:
+  schedule:
+    - cron: '17 9 * * *'   # daily, 4:17am Eastern
+  workflow_dispatch:
+  push:
+    branches: [leaderboard]
+permissions:
+  contents: write
+concurrency:
+  group: leaderboard
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/leaderboard-stats.test.mjs
+      - name: Score wallets on their last 180 days of pre-game sports bets
+        env:
+          MAX_WALLETS: ${{ github.ref_name == 'leaderboard' && '12' || '400' }}
+        run: node scripts/leaderboard.mjs
+      - name: Publish leaderboard
+        if: github.ref_name == 'main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/leaderboard.json
+          git diff --cached --quiet || git commit -m "leaderboard: daily refresh $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
