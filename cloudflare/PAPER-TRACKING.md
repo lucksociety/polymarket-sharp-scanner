@@ -1,5 +1,7 @@
 # Sports scanner: candidates and watched positions
 
+> **Policy `sharp-size-v1` (16 Nov 2026).** The default scan now uses the daily bettor leaderboard instead of the fixed 75-wallet roster, and the watched section is ranked by bet size relative to the bettor's usual bet (minimum 2×) instead of open-book concentration. Journal entries carry `sizeMultiple` and the bettor's leaderboard record. Results under this policy must be evaluated separately from `sport-price-v1`. The model-qualified candidate rules below are unchanged.
+
 The default `/polysharp` scan uses all 75 roster wallets. It produces two separate sections:
 
 - **Qualified model candidates · paper testing:** only entries passing the history, current-price, buying and exposure gates. There can be zero candidates. This is not a claim of demonstrated forward profitability.
