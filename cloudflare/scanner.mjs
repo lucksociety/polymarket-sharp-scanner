@@ -3,6 +3,9 @@ import History from '../history.js';
 import {CORE,SPORTS,classify} from './roster.mjs';
 export {CORE,SPORTS};
 export const DATA='https://data-api.polymarket.com',GAMMA='https://gamma-api.polymarket.com',CLOB='https://clob.polymarket.com';
+// Daily bettor leaderboard built by scripts/leaderboard.mjs (GitHub Actions) and committed to main.
+export const LEADERBOARD='https://raw.githubusercontent.com/lucksociety/polymarket-sharp-scanner/main/data/leaderboard.json';
+export const SHARP={minMultiple:2,maxAgeDays:4,minListed:5};
 export const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,benchmarkMode:'polymarket',minCostShare:.04,minValue:1000,minRecentGames:20,maxChase:.02,minNetBuyUsd:500,minAdditionFraction:.05,requireUnopposed:true};
 export async function pool(items,n,fn){const result=new Array(items.length);let next=0;await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(next<items.length){const i=next++;result[i]=await fn(items[i],i);}}));return result;}
 export function validateOptions(options=[]){
@@ -19,10 +22,11 @@ export function compact(url,json,conditionIds){
  if(path==='/v2/positions')return {...json,data:json.data?.map(x=>pick(x,['token_id','condition_id','current_size','avg_price','entry_cost_usdc','total_cost_usdc','current_price','current_value','event_slug','outcome','outcome_index','end_date','first_entry_at','last_event_at','opposite_token_id','redeemable','title']))};
  if(path==='/events')return json.map(x=>({slug:x.slug,title:x.title,endDate:x.endDate,tags:x.tags?.map(t=>({slug:t.slug})),markets:x.markets?.filter(m=>m.gameStartTime&&(!conditionIds||conditionIds.has(m.conditionId))).map(m=>pick(m,['conditionId','gameStartTime']))}));
  if(path.startsWith('/clob-markets/'))return pick(json,['t','fd','mos','ao']);
+ if(url===LEADERBOARD)return {generatedAt:json.generatedAt,policy:json.policy,sharps:(json.sharps||[]).slice(0,40).map(x=>({...pick(x,['rank','name','wallet','proven','games','wins','losses','winRate','avgPrice','edge','edgeLower','roi','medianStake']),bySport:Object.fromEntries(Object.entries(x.bySport||{}).map(([k,v])=>[k,pick(v,['games','wins','winRate','edge'])]))}))};
  return json;
 }
 export async function readPublic(url,conditionIds){
- const u=new URL(url);if(![DATA,GAMMA,CLOB].includes(u.origin)||u.username||u.password)throw Error('Unapproved data origin');
+ const u=new URL(url);if((url!==LEADERBOARD&&![DATA,GAMMA,CLOB].includes(u.origin))||u.username||u.password)throw Error('Unapproved data origin');
  const response=await fetch(url,{signal:AbortSignal.timeout(20000),headers:{Accept:'application/json','User-Agent':'LuckSociety-Polysharp/1.0'},credentials:'omit'});
  if(!response.ok)throw Error('Public data HTTP '+response.status);
  const value=compact(url,await response.json(),conditionIds);
@@ -31,7 +35,14 @@ export async function readPublic(url,conditionIds){
  return value;
 }
 export async function roster(get,warnings){
- // Sharp-only: scan the audited CORE roster. Monthly leaderboard wallets are not vetted, so they are no longer added automatically.
+ // Scan the best-ranked bettors from the daily leaderboard. If it is missing, stale or too short, fall back to the fixed roster
+ // (those wallets carry no record, so their cards are labelled as unranked).
+ try{
+  const lb=await get(LEADERBOARD),age=Date.now()-Date.parse(lb?.generatedAt);
+  const ok=x=>/^0x[0-9a-f]{40}$/.test(x?.wallet||'')&&x.medianStake>0&&Number.isFinite(x.edge)&&Number.isInteger(x.rank);
+  const sharps=(lb?.sharps||[]).filter(ok);
+  if(sharps.length>=SHARP.minListed&&age>=0&&age<SHARP.maxAgeDays*864e5)return sharps.map(x=>({name:String(x.name).slice(0,40),wallet:x.wallet,spec:`#${x.rank} · ${x.wins}-${x.losses} · ${x.edge>=0?'+':''}${(100*x.edge).toFixed(1)} pts vs price`,sharp:x}));
+ }catch{}
  return CORE.map(t=>({...t}));
 }
 export function compactWalletPage(page){
@@ -51,21 +62,23 @@ export async function fetchWallet(t,get,asOf){
   })};
  },`${DATA}/v2/positions?user=${t.wallet}&status=OPEN&limit=1000&filter_type=TOKENS&filter_amount=0&sort_by=CURRENT_VALUE`,{maxPages:200});
  const activity=await E.pages(get,`${DATA}/v2/activity?user=${t.wallet}&type=TRADE&start=${Math.floor(asOf/1000)-DEFAULTS.freshMinutes*60}&end=${Math.floor(asOf/1000)}&sort_direction=DESC&limit=1000`,{maxPages:20});
- const positions=E.exposure(raw.filter(p=>!p.redeemable)).filter(p=>p.curPrice>.002&&p.curPrice<.998&&p.currentValue>=1).map(p=>({...p,wallet:t.wallet,trader:t.name,spec:t.spec,scanAt:asOf}));
+ const positions=E.exposure(raw.filter(p=>!p.redeemable)).filter(p=>p.curPrice>.002&&p.curPrice<.998&&p.currentValue>=1).map(p=>({...p,wallet:t.wallet,trader:t.name,spec:t.spec,scanAt:asOf,...(t.sharp?{sharp:t.sharp,sizeMultiple:Number.isFinite(p.remainingCost)?p.remainingCost/t.sharp.medianStake:null}:{})}));
  const assets=new Set(positions.map(p=>p.asset));
  return {positions,activity:activity.filter(a=>assets.has(a.token_id)).map(a=>pick(a,['token_id','type','side','size','timestamp','price']))};
 }
+// A ranked bettor's conviction is the size of this bet against their own usual bet; unranked wallets keep the open-book share.
+export const convinced=(p,settings)=>p.sharp?p.sizeMultiple>=(settings.minMultiple??SHARP.minMultiple):p.conv>=settings.minCostShare;
 export async function collect(get,traders,options,onWallet=async fn=>fn()){
  const warnings=[],asOf=options.asOf||Date.now(),activities={};let scannedWallets=0;
  const lists=await pool(traders,3,async t=>{try{const value=await onWallet(()=>fetchWallet(t,get,asOf),t);activities[t.wallet]=value.activity;scannedWallets++;return value.positions;}catch{warnings.push(t.name+': complete positions/activity unavailable');return [];}});
  const positions=lists.flat();
  // Only potential recommendations need game metadata. The full positions array still supplies every supporter and opponent.
- const metadataRows=positions.filter(p=>p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&p.conv>=options.settings.minCostShare);
+ const metadataRows=positions.filter(p=>p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&convinced(p,options.settings));
  const slugs=[...new Set(metadataRows.map(p=>p.eventSlug).filter(Boolean))],events=new Map();
  const chunks=[];for(let i=0;i<slugs.length;i+=20)chunks.push(slugs.slice(i,i+20));
  await pool(chunks,2,async chunk=>{try{const es=await get(`${GAMMA}/events?${chunk.map(s=>'slug='+encodeURIComponent(s)).join('&')}&limit=100`,new Set(positions.map(p=>p.conditionId)));for(const e of es)events.set(e.slug,e);}catch{warnings.push('Game metadata unavailable');}});
  for(const p of positions){const ev=events.get(p.eventSlug),m=ev?.markets?.find(m=>m.conditionId===p.conditionId);p.sport=ev?classify((ev.tags||[]).map(t=>t.slug),ev.slug):classify([],p.eventSlug);p.game=m?.gameStartTime?Date.parse(m.gameStartTime):NaN;p.isGame=Number.isFinite(p.game);}
- const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&p.conv>=options.settings.minCostShare&&(options.sport==='All'?p.sport!=='Non-sports':p.sport===options.sport));
+ const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&convinced(p,options.settings)&&(options.sport==='All'?p.sport!=='Non-sports':p.sport===options.sport));
  return {positions,activities,candidates,warnings,asOf,scannedWallets,complete:warnings.length===0};
 }
 export async function quote(p,get){
@@ -85,7 +98,7 @@ export function rankUnique(assessments){
 export async function buildHistory(t,get,maxPages=30,asOf=Date.now()){
  return History.build({traders:[t],get,pool,data:DATA,gamma:GAMMA,feeRate:.05,maxPages,asOf,classifySport:classify});
 }
-export const command={name:'polysharp',description:'Scan all tracked wallets; show paper candidates and watched sports positions.',type:1,integration_types:[0],contexts:[0],options:[
+export const command={name:'polysharp',description:'Biggest upcoming bets from the best-ranked Polymarket sports bettors.',type:1,integration_types:[0],contexts:[0],options:[
  {name:'sport',description:'Sport to scan (default: all)',type:3,choices:SPORTS.map(x=>({name:x,value:x}))},
  {name:'limit',description:'Maximum candidates or watched games to show (1–10)',type:4,min_value:1,max_value:10},
  {name:'budget',description:'Cash budget per bet for liquidity and fee calculations',type:10,min_value:1,max_value:10000},

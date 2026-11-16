@@ -261,6 +261,13 @@ footer a{color:var(--gold)}
     <div class="stat"><div class="k">Games today</div><div class="v" id="sToday">—</div></div>
   </div>
 
+  <details class="day" id="leaderBox" open style="margin-top:22px">
+    <summary><span class="lbl">Bettor Leaderboard</span><span class="dt" id="leaderWhen">Loading…</span></summary>
+    <div class="day-body">
+      <p id="leaderNote" style="font-size:12px;opacity:.75;margin:0 0 12px">Ranked by win rate above the price paid, over the last 180 days of pre-game sports bets. Winning 60% at 50¢ beats winning 90% at 92¢. ✓ = the record holds up after allowing for luck. Past records do not guarantee future results.</p>
+      <div style="overflow-x:auto"><table id="leaderTable" style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums"></table></div>
+    </div>
+  </details>
   <details class="day" id="rosterBox" style="margin-top:22px">
     <summary><span class="lbl">The Roster</span><span class="dt" id="lastScan">Not scanned yet</span><span class="sum"><span id="rosterSum" style="display:flex;gap:14px"></span><span class="chev">▶</span></span></summary>
     <div class="day-body"><div class="roster" id="roster"></div></div>
@@ -783,6 +790,23 @@ render();
 </script>
 <script src="history.js?v=sport-price-v1"></script>
 <script src="edge.js?v=sport-price-v1"></script>
+<script>
+// Read-only leaderboard panel. Data is built daily by scripts/leaderboard.mjs.
+(async function(){
+  const when=document.getElementById('leaderWhen'),table=document.getElementById('leaderTable');
+  const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pct=(x,d=0)=>Number.isFinite(x)?(100*x).toFixed(d)+'%':'—',money=x=>Number.isFinite(x)?'$'+Math.round(x).toLocaleString('en-US'):'—';
+  try{
+    const r=await fetch('data/leaderboard.json',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);
+    const lb=await r.json(),rows=lb.sharps||[];
+    when.textContent=`${rows.length} bettors · updated ${new Date(lb.generatedAt).toLocaleString()} · ${lb.counts?.scored??'?'} wallets scored`;
+    const th='text-align:right;padding:6px 8px;border-bottom:1px solid var(--line2);color:var(--gold-hi);font-weight:500;white-space:nowrap',td='text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap';
+    table.innerHTML=`<thead><tr><th style="${th};text-align:left">#</th><th style="${th};text-align:left">Bettor</th><th style="${th}">Record</th><th style="${th}">Win rate</th><th style="${th}">Avg price</th><th style="${th}">Above price</th><th style="${th}">Return / bet</th><th style="${th}">Usual bet</th></tr></thead><tbody>`+
+      rows.map(x=>`<tr><td style="${td};text-align:left">${x.rank}</td><td style="${td};text-align:left"><a href="https://polymarket.com/profile/${esc(x.wallet)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>${x.proven?' ✓':''}</td><td style="${td}">${x.wins}-${x.losses}</td><td style="${td}">${pct(x.winRate)}</td><td style="${td}">${(100*x.avgPrice).toFixed(0)}¢</td><td style="${td};color:var(--green-hi)">+${(100*x.edge).toFixed(1)} pts</td><td style="${td}">${x.roi>=0?'+':''}${pct(x.roi,1)}</td><td style="${td}">${money(x.medianStake)}</td></tr>`).join('')+'</tbody>';
+    if(!rows.length)table.innerHTML='<tbody><tr><td>No bettor currently meets the listing rules.</td></tr></tbody>';
+  }catch(e){when.textContent='Leaderboard not available yet';table.innerHTML='';}
+})();
+</script>
 </body>
 </html>
 

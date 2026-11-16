@@ -103,6 +103,17 @@ node replay.js exported-journal.json
 
 The existing visual style, roster editing in `index.html` and GitHub Pages deployment are retained. Runtime files: `index.html`, `engine.js`, `history.js`, `edge.js`, `dashboard.css` and `assets/luck-society-reference.png`. The supplied Luck Society reference artwork provides the actual clover coin and city header, displayed through cropped SVG viewports without the social-profile footer. The dashboard uses an emerald, black and gold palette, responsive controls, native disclosures for advanced settings/methodology, visible keyboard focus and reduced-motion support. There are no third-party JavaScript dependencies. See `VALIDATION.md` for checks performed on this change.
 
+## Bettor leaderboard
+
+`scripts/leaderboard.mjs` runs daily in GitHub Actions (`.github/workflows/leaderboard.yml`) and writes `data/leaderboard.json`. It scores every roster wallet plus wallets found on Polymarket's sports and esports leaderboards (month, week and all-time) on the last 180 days of pre-game sports bets.
+
+- **One bet per game:** the wallet's largest pre-game position in that game, bought on one side only, held to the result. Unsettled, void and split results are left out.
+- **Edge over price:** win rate minus the all-in price paid (assumed fee `0.05·p·(1−p)`). Raw win rate is shown but not ranked on, because buying heavy favourites wins often and can still lose money.
+- **Listing rules:** 50+ settled bets over 30+ days, a pre-game bet in the last 21 days, win rate at least 2 points above price with a positive flat-stake return, and ahead in both the older and newer half of the record. Ranked by the conservative (one-sided 95%) edge; the top 30 are listed. `proven` marks wallets whose conservative edge is still above zero.
+- **Usual bet:** the median pre-game stake per position (stakes under $10 ignored). `/polysharp` compares each open bet with this.
+
+The record is retrospective and picked from a few hundred wallets, so some listed bettors will have been lucky. The forward paper log is the test.
+
 ## Discord /polysharp
 
-The Cloudflare-backed command is installed in Luck Society. `/polysharp` runs a fresh scan and posts the dashboard’s highest-conviction upcoming bets in the invoking channel, using the same ranking function and display thresholds. Optional arguments: `sport`, `limit` (1–5), `budget`, `min_edge` (cents/share) and `min_win` (percentage). History does not gate the default conviction cards. Explicit `min_edge` or `min_win` options opt into the stricter historical-edge shortlist; partial scans are clearly labeled. See [the Cloudflare command documentation](cloudflare/README.md) for deployment, cache coverage, limits and tests. The production command runs independently of GitHub Pages and does not require a bot token during normal operation.
+The Cloudflare-backed command is installed in Luck Society. `/polysharp` scans the bettors on the leaderboard and posts their biggest upcoming bets: one per game, at least 2× that bettor's usual bet size, ranked by that multiple, each with the bettor's rank and record. If the leaderboard is missing or more than four days old it falls back to the fixed roster and the original open-book concentration ranking. Optional arguments: `sport`, `limit` (1–5), `budget`, `min_edge` (cents/share) and `min_win` (percentage). History does not gate the default conviction cards. Explicit `min_edge` or `min_win` options opt into the stricter historical-edge shortlist; partial scans are clearly labeled. See [the Cloudflare command documentation](cloudflare/README.md) for deployment, cache coverage, limits and tests. The production command runs independently of GitHub Pages and does not require a bot token during normal operation.

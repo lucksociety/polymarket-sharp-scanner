@@ -116,7 +116,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
   try{
    const predictions=job.options.ranking==='predictions';
    const traders=await (predictions?predictionsRoster:roster)(get,warnings);
-   if(job.source!=='dashboard'&&job.source!=='verification')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':'tracked sports'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
+   if(job.source!=='dashboard'&&job.source!=='verification')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':traders.some(t=>t.sharp)?'top-ranked sports':'tracked sports'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
    const {evidence,missing,manifest}=predictions?{evidence:{history:[],clusters:{}},missing:[],manifest:[]}:await loadEvidence(step,this.env,traders,job.receivedAt);
    const historyPending=!predictions?await warmHistory(step,this.env,missing,job.receivedAt):0;
    const walletIds=new Map();
@@ -177,7 +177,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
 
 async function finishScan({step,env,job,runId,scan,traders,watchlist,bets,assessments,quotes,evidenceManifest,historyCount,historyPending,warnings}){
  const snapshotAt=await step.do('paper-snapshot-time',()=>Date.now());
- const rendered=scanReport({bets:bets.filter(a=>a.p.game>snapshotAt),watchlist:watchlist.filter(p=>p.game>snapshotAt),scan,rosterCount:traders.length,historyCount,historyPending,options:job.options,assessments,quotes,now:snapshotAt});
+ const rendered=scanReport({bets:bets.filter(a=>a.p.game>snapshotAt),watchlist:watchlist.filter(p=>p.game>snapshotAt),scan,rosterCount:traders.length,ranked:traders.some(t=>t.sharp),historyCount,historyPending,options:job.options,assessments,quotes,now:snapshotAt});
  const key=journalKey(runId,job.receivedAt),record=freezeRun({runId,job:{...job,rosterCount:traders.length},scan,watchlist:rendered.watchlist,candidates:rendered.candidates,assessments,quotes,evidenceManifest,payload:rendered.payload,now:snapshotAt});
  const prepared=await step.do('freeze-paper-signal',opts,async()=>{if(new TextEncoder().encode(JSON.stringify(record)).length>850000)throw Error('Frozen signal exceeds safe storage size');const saved=await putPrepared(env.CACHE,key,record);return{payload:saved.payload,preparedAt:saved.preparedAt,entries:saved.entries.map(e=>({kind:e.kind,asset:e.position.asset,conditionId:e.position.conditionId,game:e.position.game,quoteAt:e.quote?.quoteAt}))};});
  const settled=new Map(),closes=new Map();
