@@ -29,10 +29,35 @@ export async function dashboardScan(request,env,now=Date.now()){
   return corsJson({ok:false,cooldown:Math.ceil(((bucket+1)*DASHBOARD_COOLDOWN_MS-now)/1000)},429);
  }
 }
+// Alert trigger, called by the scheduled watcher (scripts/watch.mjs) when it sees a new big bet. The worker rescans and posts
+// only cards it has not alerted before, so calling this cannot make it repeat or invent a post. Bounded per 10 minutes and per day.
+const ALERT_COOLDOWN_MS=10*60000,ALERT_DAILY_LIMIT=16;
+export async function alertScan(request,env,now=Date.now()){
+ if(request.method!=='POST')return json({ok:false,error:'Method not allowed'},405);
+ const webhook=String(env.DASHBOARD_WEBHOOK_URL||'');
+ if(!/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[\w-]+$/.test(webhook))return json({ok:false,error:'Discord channel webhook is not configured'},503);
+ if(!env.SCANS||!env.CACHE)return json({ok:false,error:'Background scanner is not ready'},503);
+ const budgetKey='alert-budget/'+new Date(now).toISOString().slice(0,10),used=Number(await env.CACHE.get(budgetKey))||0;
+ if(used>=ALERT_DAILY_LIMIT)return json({ok:false,error:'Daily alert scan limit reached'},429);
+ const bucket=Math.floor(now/ALERT_COOLDOWN_MS);
+ try{
+  await env.SCANS.create({id:`alert-${bucket}`,params:{source:'alert',webhook,receivedAt:now,options:{...validateOptions([]),limit:10}}});
+  await env.CACHE.put(budgetKey,String(used+1),{expirationTtl:2*86400});
+  return json({ok:true,queued:true},202);
+ }catch{return json({ok:false,cooldown:Math.ceil(((bucket+1)*ALERT_COOLDOWN_MS-now)/1000)},429);}
+}
+// Aggregate paper results only; no wallets' private data, journal entries or credentials.
+export async function scorecard(request,env){
+ if(request.method!=='GET')return json({ok:false,error:'Method not allowed'},405);
+ const body=env.CACHE?await env.CACHE.get('scorecard/v1/latest','json'):null;
+ return Response.json(body||{empty:true},{headers:{'Access-Control-Allow-Origin':DASHBOARD_ORIGIN,'Vary':'Origin','Cache-Control':'public, max-age=300'}});
+}
 export async function handle(request,env){
  const url=new URL(request.url);
  if(request.method==='GET'&&url.pathname==='/health')return json({ok:true,command:'polysharp',ready:Boolean(env.SCANS&&env.CACHE),mode:'paper',signalJournal:true,dashboardRelay:Boolean(env.DASHBOARD_WEBHOOK_URL)});
  if(url.pathname==='/scan')return dashboardScan(request,env);
+ if(url.pathname==='/alert')return alertScan(request,env);
+ if(url.pathname==='/scorecard')return scorecard(request,env);
  if(request.method!=='POST'||url.pathname!=='/interactions')return new Response('Not found',{status:404});
  if(Number(request.headers.get('Content-Length'))>65536)return new Response('Too large',{status:413});
  const body=await request.text();if(encoder.encode(body).length>65536)return new Response('Too large',{status:413});
@@ -101,7 +126,7 @@ export function predictionsReport(plays,wallets,total,count,warnings){
  return {content:'[Open the Smart Money Scanner](https://lucksociety.github.io/polymarket-smart-money-scanner/)',embeds:[{title:'☘ Luck Society · Smart Money Predictions',color:0xd4b259,description,fields}],allowed_mentions:{parse:[]}};
 }
 export async function editReply(job,payload,fetcher=fetch){
- if(job.source==='dashboard'){
+ if(job.source==='dashboard'||job.source==='alert'){
   // Dashboard-triggered scans post one new message to the configured channel webhook.
   const r=await fetcher(job.webhook+'?wait=true',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,content:payload.content||'☘ Triggered from the dashboard SCAN button',allowed_mentions:{parse:[]}}),signal:AbortSignal.timeout(15000)});
   if(!r.ok){await r.body?.cancel();throw Error('Discord webhook HTTP '+r.status);}let message;try{message=await r.json();}catch{}return {delivered:true,messageId:message?.id||null,channelId:message?.channel_id||null};

@@ -6,7 +6,13 @@ export const DATA='https://data-api.polymarket.com',GAMMA='https://gamma-api.pol
 // Daily bettor leaderboard built by scripts/leaderboard.mjs (GitHub Actions) and committed to main.
 export const LEADERBOARD='https://raw.githubusercontent.com/lucksociety/polymarket-sharp-scanner/main/data/leaderboard.json';
 export const SHARP={minMultiple:2,maxAgeDays:4,minListed:5};
-export const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,benchmarkMode:'polymarket',minCostShare:.04,minValue:1000,minRecentGames:20,maxChase:.02,minNetBuyUsd:500,minAdditionFraction:.05,requireUnopposed:true};
+// How a ranked bettor has done in this bet's sport: 'strong' (ahead of price), 'weak' (20+ bets and not ahead) or 'thin' (too few bets to say).
+export const sportFit=p=>{if(!p.sharp)return null;const r=p.sharp.bySport?.[p.sport];return !r?'thin':r.edge>0?'strong':'weak';};
+// How far the price has moved since the bettor bought (positive = more expensive now). null when either price is unknown.
+export const priceMove=p=>Number.isFinite(p.curPrice)&&Number.isFinite(p.avgPrice)&&p.avgPrice>0?p.curPrice-p.avgPrice:null;
+// A ranked bettor's bet is shown only if they are not behind in this sport and the price has not run away from their entry.
+export const showable=(p,settings)=>!p.sharp||(p.sportFit!=='weak'&&!(priceMove(p)>(settings.maxLate??.06)));
+export const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,benchmarkMode:'polymarket',minCostShare:.04,minValue:1000,minRecentGames:20,maxChase:.02,minNetBuyUsd:500,minAdditionFraction:.05,requireUnopposed:true,maxLate:.06};
 export async function pool(items,n,fn){const result=new Array(items.length);let next=0;await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(next<items.length){const i=next++;result[i]=await fn(items[i],i);}}));return result;}
 export function validateOptions(options=[]){
  const out={sport:'All',limit:10,ranking:'edge',settings:{...DEFAULTS}},seen=new Set();
@@ -77,8 +83,8 @@ export async function collect(get,traders,options,onWallet=async fn=>fn()){
  const slugs=[...new Set(metadataRows.map(p=>p.eventSlug).filter(Boolean))],events=new Map();
  const chunks=[];for(let i=0;i<slugs.length;i+=20)chunks.push(slugs.slice(i,i+20));
  await pool(chunks,2,async chunk=>{try{const es=await get(`${GAMMA}/events?${chunk.map(s=>'slug='+encodeURIComponent(s)).join('&')}&limit=100`,new Set(positions.map(p=>p.conditionId)));for(const e of es)events.set(e.slug,e);}catch{warnings.push('Game metadata unavailable');}});
- for(const p of positions){const ev=events.get(p.eventSlug),m=ev?.markets?.find(m=>m.conditionId===p.conditionId);p.sport=ev?classify((ev.tags||[]).map(t=>t.slug),ev.slug):classify([],p.eventSlug);p.game=m?.gameStartTime?Date.parse(m.gameStartTime):NaN;p.isGame=Number.isFinite(p.game);}
- const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&convinced(p,options.settings)&&(options.sport==='All'?p.sport!=='Non-sports':p.sport===options.sport));
+ for(const p of positions){const ev=events.get(p.eventSlug),m=ev?.markets?.find(m=>m.conditionId===p.conditionId);p.sport=ev?classify((ev.tags||[]).map(t=>t.slug),ev.slug):classify([],p.eventSlug);p.game=m?.gameStartTime?Date.parse(m.gameStartTime):NaN;p.isGame=Number.isFinite(p.game);p.sportFit=sportFit(p);}
+ const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&convinced(p,options.settings)&&showable(p,options.settings)&&(options.sport==='All'?p.sport!=='Non-sports':p.sport===options.sport));
  return {positions,activities,candidates,warnings,asOf,scannedWallets,complete:warnings.length===0};
 }
 export async function quote(p,get){

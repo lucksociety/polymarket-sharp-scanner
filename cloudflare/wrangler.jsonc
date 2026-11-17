@@ -14,6 +14,9 @@
     "HISTORY_MAX_PAGES": "30",
     "ALLOWED_GUILD_IDS": "780172495268610059"
   },
+  "triggers": {
+    "crons": ["23 13 * * *"]
+  },
   "workflows": [
     {
       "name": "polysharp-jobs",

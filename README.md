@@ -114,6 +114,22 @@ The existing visual style, roster editing in `index.html` and GitHub Pages deplo
 
 The record is retrospective and picked from a few hundred wallets, so some listed bettors will have been lucky. The forward paper log is the test.
 
+## Which bets are shown
+
+For a ranked bettor a bet becomes a card when all of these hold:
+
+- it is on an upcoming game, at least $1,000, and at least 2× the bettor's usual bet;
+- the bettor is not behind in that sport. With 20+ bets in the sport and a win rate at or below price, the bet is left out; with fewer than 20 the card says "Few … bets on record" and ranks after bettors who are ahead in the sport;
+- the price is no more than 6¢ above what the bettor paid. Each card says whether the price is still near their entry, has moved up, or is cheaper.
+
+## Alerts
+
+`.github/workflows/alerts.yml` runs `scripts/watch.mjs` about every 20 minutes. When a ranked bettor has a new card it calls the worker's `POST /alert`. The worker rescans, posts at most three cards that it has not alerted before and that were traded in the last six hours, through the same channel webhook as the dashboard SCAN button, and remembers them for 14 days. `/alert` runs at most once per 10 minutes and 16 times a day; calling it cannot make the worker repeat a card.
+
+## Scorecard
+
+Every ranked-bettor card that is actually posted is added to a compact ledger in the worker's private KV. A daily cron (13:23 UTC) settles them from the results the worker already tracks and stores a summary: $100 on the first card posted for each game, at the price shown when it was posted, held to the result. The summary is shown on the dashboard (`GET /scorecard`, aggregates only), as one line on every `/polysharp` report, and is posted to the channel every Monday. Void and split results are left out.
+
 ## Discord /polysharp
 
 The Cloudflare-backed command is installed in Luck Society. `/polysharp` scans the bettors on the leaderboard and posts their biggest upcoming bets: one per game, at least 2× that bettor's usual bet size, ranked by that multiple, each with the bettor's rank and record. If the leaderboard is missing or more than four days old it falls back to the fixed roster and the original open-book concentration ranking. Optional arguments: `sport`, `limit` (1–5), `budget`, `min_edge` (cents/share) and `min_win` (percentage). History does not gate the default conviction cards. Explicit `min_edge` or `min_win` options opt into the stricter historical-edge shortlist; partial scans are clearly labeled. See [the Cloudflare command documentation](cloudflare/README.md) for deployment, cache coverage, limits and tests. The production command runs independently of GitHub Pages and does not require a bot token during normal operation.
