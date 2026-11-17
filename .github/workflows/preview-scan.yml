@@ -13,4 +13,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node scripts/preview-scan.mjs
+      - run: SPORT=NBA node scripts/preview-scan.mjs
+      - run: SPORT='Other sports' node scripts/preview-scan.mjs
