@@ -17,12 +17,12 @@ test('roster uses ranked bettors when the leaderboard is fresh, else the fixed r
 });
 const raw=(o={})=>({token_id:'42',condition_id:'0x'+'a'.repeat(64),current_size:4000,avg_price:.5,entry_cost_usdc:2000,total_cost_usdc:2050,current_price:.55,current_value:2200,event_slug:'nba-a-b',outcome:'A',outcome_index:0,opposite_token_id:'43',redeemable:false,title:'A vs B',...o});
 const api=rows=>async url=>{const u=new URL(url);if(u.pathname==='/v2/positions')return{data:rows(u.searchParams.get('user')),pagination:{next_cursor:null}};if(u.pathname==='/v2/activity')return{data:[],pagination:{next_cursor:null}};if(u.pathname==='/events')return[{slug:'nba-a-b',tags:[{slug:'nba'}],markets:[{conditionId:'0x'+'a'.repeat(64),gameStartTime:new Date(now+36e5).toISOString()},{conditionId:'0x'+'b'.repeat(64),gameStartTime:new Date(now+72e5).toISOString()}]}];throw Error('unexpected '+url);};
-test('conviction for a ranked bettor is the bet size against their own usual bet',async()=>{
+test('a ranked bettor needs a real bet for them, and other open money does not matter',async()=>{
  const traders=(await roster(async()=>compact(LEADERBOARD,board()),[])).slice(0,2);traders[1].sharp={...traders[1].sharp,medianStake:5000};
- // Same $2,000 bet: 4x usual for the first bettor, 0.4x for the second. Lots of other open money must not matter.
+ // Same $2,000 bet: 4x usual for the first bettor, 0.4x (a scrap) for the second. Lots of other open money must not matter.
  const scan=await collect(api(()=>[raw(),raw({token_id:'77',condition_id:'0x'+'c'.repeat(64),event_slug:'old-future',entry_cost_usdc:500000,current_value:500000,opposite_token_id:'78'})]),traders,{sport:'All',limit:10,settings:{...DEFAULTS},asOf:now});
  const upcoming=scan.candidates;assert.equal(upcoming.length,1);assert.equal(upcoming[0].wallet,traders[0].wallet);assert.equal(upcoming[0].sizeMultiple,4);assert.ok(upcoming[0].conv<.01);
- assert.equal(convinced({sharp:{},sizeMultiple:1.9},DEFAULTS),false);assert.equal(convinced({conv:.05},DEFAULTS),true);
+ assert.equal(convinced({sharp:{},sizeMultiple:.4},DEFAULTS),false);assert.equal(convinced({sharp:{},sizeMultiple:.6},DEFAULTS),true);assert.equal(upcoming[0].trust.tier,'High');assert.equal(convinced({conv:.05},DEFAULTS),true);
 });
 test('watchlist ranks ranked bettors by size multiple and keeps one bet per game',()=>{
  const p={isGame:true,game:now+1e6,netShares:1,costKnown:true,costBook:100,conv:.01,sharp:row(1),eventSlug:'g1'};
@@ -34,7 +34,8 @@ test('ranked report leads with the bettor record and size, and escapes names',()
  const opp={...p,wallet:W(2),outcomeIndex:1,sharp:row(2)};
  const out=scanReport({watchlist:[p],scan:{complete:true,scannedWallets:30,positions:[p,opp]},rosterCount:30,options:{limit:10,sport:'All',settings:{...DEFAULTS}},now});
  const [summary,bets]=out.payload.embeds;assert.equal(out.payload.embeds.length,2);assert.match(summary.description,/Top 30 bettors by win rate above the price/);
- const v=bets.fields[0].value;assert.match(v,/#1 .* ✓ · 60-40 \(60%\) at avg 50\.0¢ · \+8\.8 pts vs price/);assert.match(v,/NBA only: 26-14 \(65%\)/);assert.match(v,/\*\*12× their usual bet\*\* · \$6,200 in at 54\.0¢/);assert.match(v,/Other top bettors: 0 with · 1 against/);
+ const v=bets.fields[0].value;assert.match(v,/#1 .* ✓ · 60-40 \(60%\) at avg 50\.0¢ · \+8\.8 pts vs price/);assert.match(v,/NBA only: 26-14 \(65%\)/);assert.match(v,/\*\*12× their usual bet\*\* · \$6,200 in at 54\.0¢/);assert.match(v,/Unrated/);assert.match(v,/Other top bettors: 0 with · 1 against/);
  assert.equal(v.includes('@everyone'),false);assert.equal(recordLine({trader:'x'}),null);
+ const rated=scanReport({watchlist:[{...p,trust:{tier:'High',estWin:.66,score:.09}}],scan:{complete:true,scannedWallets:30,positions:[p]},rosterCount:30,options:{limit:10,sport:'All'},now}).payload.embeds[1].fields[0].value;assert.match(rated,/🟢 High trust\*\* · est\. win chance 66% \(price 57\.0¢\)/);
  const none=scanReport({watchlist:[],scan:{complete:true,scannedWallets:30,positions:[p]},rosterCount:30,options:{limit:10,sport:'All'},now});assert.match(none.payload.embeds[1].description,/None of the top bettors/);
 });

@@ -15,10 +15,10 @@ if (!traders.some((t) => t.sharp)) { console.log('Leaderboard unavailable; nothi
 const scan = await collect(get, traders, { ...validateOptions([]), asOf: now });
 if (!scan.complete) { console.log('Incomplete scan; skipping this round.', scan.warnings.slice(0, 3)); process.exit(0); }
 const recent = (p) => { const t = typeof p.lastEvent === 'number' ? (p.lastEvent < 1e12 ? p.lastEvent * 1000 : p.lastEvent) : Date.parse(p.lastEvent); return !Number.isFinite(t) || now - t < 6 * 3600000; };
-const cards = selectWatchlist(scan.candidates, { now, limit: 10 }).filter((p) => p.sharp), key = (p) => p.wallet + '|' + p.asset;
+const cards = selectWatchlist(scan.candidates, { now, limit: 10 }).filter((p) => p.sharp && p.trust?.alert), key = (p) => p.wallet + '|' + p.asset;
 const fresh = cards.filter((p) => !state.seen[key(p)] && recent(p));
 console.log(`${scan.scannedWallets} wallets, ${cards.length} cards, ${fresh.length} new${first ? ' (first run: recording only)' : ''}`);
-for (const p of fresh) console.log(`  new: #${p.sharp.rank} ${p.trader} · ${p.title} · ${p.outcome} · ${p.sizeMultiple.toFixed(1)}x`);
+for (const p of fresh) console.log(`  new: #${p.sharp.rank} ${p.trader} · ${p.title} · ${p.outcome} · ${p.trust.tier} · ${p.sizeMultiple.toFixed(1)}x`);
 
 let accepted = first || !fresh.length;
 if (!first && fresh.length) {

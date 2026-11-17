@@ -147,10 +147,10 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    if(warnings.length)scan.complete=false;warnings.push(...scan.warnings);
    let watchlist=selectWatchlist(scan.candidates,{now:Date.now(),limit:job.options.limit});
    if(job.source==='alert'){
-    // Alerts post only ranked bettors' cards that have not been alerted before and were traded recently.
+    // Alerts post only high-trust (or solid and unusually large) cards that have not been alerted before and were traded recently.
     const recent=p=>{const t=typeof p.lastEvent==='number'?(p.lastEvent<1e12?p.lastEvent*1000:p.lastEvent):Date.parse(p.lastEvent);return !Number.isFinite(t)||job.receivedAt-t<6*3600000;};
     const fresh=[];
-    for(const p of watchlist.filter(p=>p.sharp&&recent(p))){const seen=await step.do('alerted-'+await digest(alertKey(p)),()=>this.env.CACHE.get(alertKey(p)).then(Boolean));if(!seen)fresh.push(p);}
+    for(const p of watchlist.filter(p=>p.sharp&&p.trust?.alert&&recent(p))){const seen=await step.do('alerted-'+await digest(alertKey(p)),()=>this.env.CACHE.get(alertKey(p)).then(Boolean));if(!seen)fresh.push(p);}
     watchlist=fresh.slice(0,3);
     if(!watchlist.length||!scan.complete)return{mode:'alert',published:0,complete:scan.complete};
    }

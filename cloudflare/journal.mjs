@@ -1,11 +1,11 @@
 // Private, append-only paper observations. Never persist interaction tokens or webhooks.
-export const POLICY='sharp-size-v2';
+export const POLICY='sharp-trust-v1';
 export const PREFIX='signals/v1/';
 const copy=(x,keys)=>Object.fromEntries(keys.filter(k=>x?.[k]!==undefined).map(k=>[k,x[k]]));
 export const gameKey=p=>(p.eventSlug||p.conditionId||p.asset).replace(/-more-markets$/,'');
 export function selectWatchlist(rows,{now=Date.now(),limit=10}={}){
- // Ranked bettors: those ahead of price in this sport first, then the biggest bet relative to their own usual size. Unranked wallets keep the open-book share and its $25K floor.
- const sorted=rows.filter(p=>p.isGame&&p.game>now&&p.netShares>0&&p.costKnown!==false&&(p.sharp||p.costBook>=25000)).sort((a,b)=>(b.sportFit==='strong')-(a.sportFit==='strong')||(b.sizeMultiple??-1)-(a.sizeMultiple??-1)||b.conv-a.conv);
+ // Ranked bettors: most trusted bet first (see trust() in scanner.mjs). Unranked wallets keep the open-book share and its $25K floor.
+ const sorted=rows.filter(p=>p.isGame&&p.game>now&&p.netShares>0&&p.costKnown!==false&&(p.sharp||p.costBook>=25000)).sort((a,b)=>(b.trust?.score??-1)-(a.trust?.score??-1)||(b.sizeMultiple??-1)-(a.sizeMultiple??-1)||b.conv-a.conv);
  const seen=new Set();return sorted.filter(p=>{const k=gameKey(p);if(seen.has(k))return false;seen.add(k);return true}).slice(0,limit);
 }
 export const journalKey=(runId,at)=>PREFIX+new Date(at).toISOString().slice(0,10)+'/'+runId;
@@ -20,7 +20,7 @@ function freezeQuote(q,ex){
  const bids=[...(q.book.bids||[])].sort((a,b)=>Number(b.price)-Number(a.price)).slice(0,1);
  return{quoteAt:q.quoteAt,book:{...copy(q.book,['asset_id','market','timestamp','_fetchedAt']),asks,bids},info:copy(q.info,['fd','mos','ao','t'])};
 }
-const positionKeys=['wallet','trader','sport','asset','conditionId','outcomeIndex','outcome','eventSlug','title','game','isGame','conv','remainingCost','costBook','costKnown','netShares','scanAt','avgPrice','sizeMultiple','sharp','sportFit','lastEvent','curPrice'];
+const positionKeys=['wallet','trader','sport','asset','conditionId','outcomeIndex','outcome','eventSlug','title','game','isGame','conv','remainingCost','costBook','costKnown','netShares','scanAt','avgPrice','sizeMultiple','sharp','sportFit','lastEvent','curPrice','trust'];
 export function freezeRun({runId,job,scan,watchlist,candidates,assessments,quotes,evidenceManifest=[],payload,now=Date.now()}){
  const assessmentMap=new Map(assessments.map(a=>[a.p.wallet+'|'+a.p.asset,a]));
  const freeze=(p,kind)=>{const a=assessmentMap.get(p.wallet+'|'+p.asset),q=quotes.get(p.asset);return{kind,position:copy(p,positionKeys),indicativePrice:p.curPrice??null,quote:freezeQuote(q,a?.ex),assessment:a?{quality:a.q,flow:a.flow,benchmark:a.b,execution:a.ex,consensus:a.cons,edge:a.edge,roi:a.roi,reasons:a.reasons,eligible:a.eligible}:null}};

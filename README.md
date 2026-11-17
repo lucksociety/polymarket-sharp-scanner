@@ -116,15 +116,17 @@ The record is retrospective and picked from a few hundred wallets, so some liste
 
 ## Which bets are shown
 
-For a ranked bettor a bet becomes a card when all of these hold:
+Every real bet a ranked bettor has on an upcoming game is considered: at least $200 and at least half their usual bet. Each gets a trust score (`trust()` in `cloudflare/scanner.mjs`):
 
-- it is on an upcoming game, at least $1,000, and at least 2× the bettor's usual bet;
-- the bettor is not behind in that sport. With 20+ bets in the sport and a win rate at or below price, the bet is left out; with fewer than 20 the card says "Few … bets on record" and ranks after bettors who are ahead in the sport;
-- the price is no more than 6¢ above what the bettor paid. Each card says whether the price is still near their entry, has moved up, or is cheaper.
+- **Start:** the bettor's expected edge in that sport, which is their record in the sport blended with their overall record. A thin sport record counts for less, a record that could still be luck is marked down 40%, and the figure is capped at 12 points.
+- **Raised** for a bigger-than-usual bet (up to +45%) and for each other ranked bettor on the same side.
+- **Lowered** for each ranked bettor on the other side and by any rise in price since the bettor bought.
+
+Cards are ordered by trust, one per game. A bet is left out if the score is not positive, if the bettor is behind in that sport over 20+ bets, or if the price is more than 6¢ above their entry. Ratings: High (6+ points and either a proven bettor or agreement), Solid (3+), Lean. The estimated win chance on each card is the current price plus the trust score; it is a rough estimate, not a measured probability.
 
 ## Alerts
 
-`.github/workflows/alerts.yml` runs `scripts/watch.mjs` about every 20 minutes. When a ranked bettor has a new card it calls the worker's `POST /alert`. The worker rescans, posts at most three cards that it has not alerted before and that were traded in the last six hours, through the same channel webhook as the dashboard SCAN button, and remembers them for 14 days. `/alert` runs at most once per 10 minutes and 16 times a day; calling it cannot make the worker repeat a card.
+`.github/workflows/alerts.yml` runs `scripts/watch.mjs` about every 20 minutes. When a ranked bettor has a new high-trust card (or a solid one at 2× their usual size or more) it calls the worker's `POST /alert`. The worker rescans, posts at most three cards that it has not alerted before and that were traded in the last six hours, through the same channel webhook as the dashboard SCAN button, and remembers them for 14 days. `/alert` runs at most once per 10 minutes and 16 times a day; calling it cannot make the worker repeat a card.
 
 ## Scorecard
 
@@ -132,4 +134,4 @@ Every ranked-bettor card that is actually posted is added to a compact ledger in
 
 ## Discord /polysharp
 
-The Cloudflare-backed command is installed in Luck Society. `/polysharp` scans the bettors on the leaderboard and posts their biggest upcoming bets: one per game, at least 2× that bettor's usual bet size, ranked by that multiple, each with the bettor's rank and record. If the leaderboard is missing or more than four days old it falls back to the fixed roster and the original open-book concentration ranking. Optional arguments: `sport`, `limit` (1–5), `budget`, `min_edge` (cents/share) and `min_win` (percentage). History does not gate the default conviction cards. Explicit `min_edge` or `min_win` options opt into the stricter historical-edge shortlist; partial scans are clearly labeled. See [the Cloudflare command documentation](cloudflare/README.md) for deployment, cache coverage, limits and tests. The production command runs independently of GitHub Pages and does not require a bot token during normal operation.
+The Cloudflare-backed command is installed in Luck Society. `/polysharp` scans the bettors on the leaderboard and posts their most trusted upcoming bets: one per game, ordered by trust score, each with a rating, a rough win chance, and the bettor's rank and record. If the leaderboard is missing or more than four days old it falls back to the fixed roster and the original open-book concentration ranking. Optional arguments: `sport`, `limit` (1–5), `budget`, `min_edge` (cents/share) and `min_win` (percentage). History does not gate the default conviction cards. Explicit `min_edge` or `min_win` options opt into the stricter historical-edge shortlist; partial scans are clearly labeled. See [the Cloudflare command documentation](cloudflare/README.md) for deployment, cache coverage, limits and tests. The production command runs independently of GitHub Pages and does not require a bot token during normal operation.

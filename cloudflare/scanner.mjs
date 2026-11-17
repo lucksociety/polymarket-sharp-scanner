@@ -5,7 +5,30 @@ export {CORE,SPORTS};
 export const DATA='https://data-api.polymarket.com',GAMMA='https://gamma-api.polymarket.com',CLOB='https://clob.polymarket.com';
 // Daily bettor leaderboard built by scripts/leaderboard.mjs (GitHub Actions) and committed to main.
 export const LEADERBOARD='https://raw.githubusercontent.com/lucksociety/polymarket-sharp-scanner/main/data/leaderboard.json';
-export const SHARP={minMultiple:2,maxAgeDays:4,minListed:5};
+export const SHARP={minMultiple:.5,minValue:200,maxAgeDays:4,minListed:5};
+// How much a ranked bettor is expected to beat the price in this sport: their record in the sport blended with their overall
+// record (a thin sport record counts for less), marked down when the overall record could still be luck, and capped.
+export function expectedEdge(s,sport){
+ if(!s||!Number.isFinite(s.edge))return 0;
+ const r=s.bySport?.[sport],base=r?(r.games*r.edge+20*s.edge)/(r.games+20):.5*s.edge;
+ return Math.max(-.12,Math.min(.12,base*(s.proven?1:.6)));
+}
+/** Trust in one bet: the bettor's expected edge, raised for a bigger-than-usual bet and for other ranked bettors on the same side,
+ *  lowered for ranked bettors on the other side and for any rise in price since the bettor bought. `rows` are all scanned positions. */
+export function trust(p,rows,settings={}){
+ if(!p.sharp)return null;
+ const floor=settings.minSharpValue??SHARP.minValue,seen=new Set([p.wallet]);let withE=0,againstE=0,withN=0,againstN=0;
+ for(const x of rows){
+  if(x.conditionId!==p.conditionId||!x.sharp||!(x.netShares>0)||!((x.currentValue||0)>=floor)||seen.has(x.wallet))continue;seen.add(x.wallet);
+  const e=Math.max(0,expectedEdge(x.sharp,p.sport));
+  if(x.outcomeIndex===p.outcomeIndex){withE+=.5*e;withN++;}else{againstE+=e;againstN++;}
+ }
+ const m=p.sizeMultiple,size=m>=1?1+.15*Math.min(Math.log2(m),3):.85,move=Math.max(0,priceMove(p)??0);
+ const score=expectedEdge(p.sharp,p.sport)*size+withE-againstE-move;
+ const tier=score>=.06&&(p.sharp.proven||withN>=1)?'High':score>=.03?'Solid':score>0?'Lean':'None';
+ return{score:+score.toFixed(4),estWin:Number.isFinite(p.curPrice)?+Math.max(.01,Math.min(.99,p.curPrice+score)).toFixed(3):null,tier,with:withN,against:againstN,
+  alert:tier==='High'||(tier==='Solid'&&m>=2)};
+}
 // How a ranked bettor has done in this bet's sport: 'strong' (ahead of price), 'weak' (20+ bets and not ahead) or 'thin' (too few bets to say).
 export const sportFit=p=>{if(!p.sharp)return null;const r=p.sharp.bySport?.[p.sport];return !r?'thin':r.edge>0?'strong':'weak';};
 // How far the price has moved since the bettor bought (positive = more expensive now). null when either price is unknown.
@@ -72,20 +95,23 @@ export async function fetchWallet(t,get,asOf){
  const assets=new Set(positions.map(p=>p.asset));
  return {positions,activity:activity.filter(a=>assets.has(a.token_id)).map(a=>pick(a,['token_id','type','side','size','timestamp','price']))};
 }
-// A ranked bettor's conviction is the size of this bet against their own usual bet; unranked wallets keep the open-book share.
+// Ranked bettors: any real bet counts (size feeds the trust score instead of gating). Unranked wallets keep the open-book share.
 export const convinced=(p,settings)=>p.sharp?p.sizeMultiple>=(settings.minMultiple??SHARP.minMultiple):p.conv>=settings.minCostShare;
+// A ranked bettor's bet only has to be a real bet for them ($200 and at least half their usual size); unranked wallets keep the $1,000 floor.
+export const bigEnough=(p,settings)=>p.currentValue>=(p.sharp?(settings.minSharpValue??SHARP.minValue):settings.minValue);
 export async function collect(get,traders,options,onWallet=async fn=>fn()){
  const warnings=[],asOf=options.asOf||Date.now(),activities={};let scannedWallets=0;
  const lists=await pool(traders,3,async t=>{try{const value=await onWallet(()=>fetchWallet(t,get,asOf),t);activities[t.wallet]=value.activity;scannedWallets++;return value.positions;}catch{warnings.push(t.name+': complete positions/activity unavailable');return [];}});
  const positions=lists.flat();
  // Only potential recommendations need game metadata. The full positions array still supplies every supporter and opponent.
- const metadataRows=positions.filter(p=>p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&convinced(p,options.settings));
+ const metadataRows=positions.filter(p=>p.netShares>0&&p.outcomeIndex!==999&&bigEnough(p,options.settings)&&convinced(p,options.settings));
  const slugs=[...new Set(metadataRows.map(p=>p.eventSlug).filter(Boolean))],events=new Map();
  const chunks=[];for(let i=0;i<slugs.length;i+=20)chunks.push(slugs.slice(i,i+20));
  await pool(chunks,2,async chunk=>{try{const es=await get(`${GAMMA}/events?${chunk.map(s=>'slug='+encodeURIComponent(s)).join('&')}&limit=100`,new Set(positions.map(p=>p.conditionId)));for(const e of es)events.set(e.slug,e);}catch{warnings.push('Game metadata unavailable');}});
  for(const p of positions){const ev=events.get(p.eventSlug),m=ev?.markets?.find(m=>m.conditionId===p.conditionId);p.sport=ev?classify((ev.tags||[]).map(t=>t.slug),ev.slug):classify([],p.eventSlug);p.game=m?.gameStartTime?Date.parse(m.gameStartTime):NaN;p.isGame=Number.isFinite(p.game);p.sportFit=sportFit(p);}
- const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&p.currentValue>=options.settings.minValue&&convinced(p,options.settings)&&showable(p,options.settings)&&(options.sport==='All'?p.sport!=='Non-sports':p.sport===options.sport));
- return {positions,activities,candidates,warnings,asOf,scannedWallets,complete:warnings.length===0};
+ const candidates=positions.filter(p=>p.isGame&&p.game>Date.now()&&p.netShares>0&&p.outcomeIndex!==999&&bigEnough(p,options.settings)&&convinced(p,options.settings)&&showable(p,options.settings)&&(options.sport==='All'?p.sport!=='Non-sports':p.sport===options.sport));
+ for(const p of candidates)if(p.sharp)p.trust=trust(p,positions,options.settings);
+ return {positions,activities,candidates:candidates.filter(p=>!p.sharp||p.trust.score>0),warnings,asOf,scannedWallets,complete:warnings.length===0};
 }
 export async function quote(p,get){
  const [book,info]=await Promise.all([get(`${CLOB}/book?token_id=${p.asset}`),get(`${CLOB}/clob-markets/${p.conditionId}`)]);
@@ -104,7 +130,7 @@ export function rankUnique(assessments){
 export async function buildHistory(t,get,maxPages=30,asOf=Date.now()){
  return History.build({traders:[t],get,pool,data:DATA,gamma:GAMMA,feeRate:.05,maxPages,asOf,classifySport:classify});
 }
-export const command={name:'polysharp',description:'Biggest upcoming bets from the best-ranked Polymarket sports bettors.',type:1,integration_types:[0],contexts:[0],options:[
+export const command={name:'polysharp',description:'Most trusted upcoming bets from the best-ranked Polymarket sports bettors.',type:1,integration_types:[0],contexts:[0],options:[
  {name:'sport',description:'Sport to scan (default: all)',type:3,choices:SPORTS.map(x=>({name:x,value:x}))},
  {name:'limit',description:'Maximum candidates or watched games to show (1–10)',type:4,min_value:1,max_value:10},
  {name:'budget',description:'Cash budget per bet for liquidity and fee calculations',type:10,min_value:1,max_value:10000},

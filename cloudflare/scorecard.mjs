@@ -12,7 +12,7 @@ export function ledgerEntries(record){
   runId:record.runId,at:record.preparedAt,policy:record.policy,source:record.source,wallet:p.wallet,trader:p.trader,rank:p.sharp.rank,proven:!!p.sharp.proven,
   sport:p.sport,sportFit:p.sportFit||null,title:String(p.title||'').slice(0,120),outcome:String(p.outcome||'').slice(0,60),asset:p.asset,conditionId:p.conditionId,outcomeIndex:p.outcomeIndex,
   game:p.game,gameKey:game(p),paid:Number.isFinite(p.avgPrice)?p.avgPrice:null,indicative:Number.isFinite(e.indicativePrice)?e.indicativePrice:null,
-  allIn:ex?.known&&ex.filled&&Number.isFinite(ex.allIn)?ex.allIn:null,sizeMultiple:Number.isFinite(p.sizeMultiple)?+p.sizeMultiple.toFixed(2):null};});
+  allIn:ex?.known&&ex.filled&&Number.isFinite(ex.allIn)?ex.allIn:null,sizeMultiple:Number.isFinite(p.sizeMultiple)?+p.sizeMultiple.toFixed(2):null,trust:p.trust?.tier||null,estWin:p.trust?.estWin??null};});
 }
 export function appendLedger(existing,entries){
  const rows=Array.isArray(existing)?existing:[],seen=new Set(rows.map(r=>r.runId+'|'+r.asset));
@@ -32,7 +32,7 @@ function add(g,e,payout,cost){
 const finish=g=>({bets:g.bets,wins:g.wins,losses:g.losses,pending:g.pending,winRate:g.bets?g.wins/g.bets:null,profitPer100:g.bets?+(g.profit/g.bets).toFixed(2):null});
 /** results: {conditionId: payouts[]} for resolved markets. */
 export function summarize(entries,results={},now=Date.now()){
- const overall=blank(),groups={tier:{},sport:{},size:{},price:{},source:{}},recent=[];let approx=0,skipped=0;
+ const overall=blank(),groups={trust:{},tier:{},sport:{},size:{},price:{},source:{}},recent=[];let approx=0,skipped=0;
  const bump=(kind,name,e,payout,cost)=>add(groups[kind][name]||=blank(),e,payout,cost);
  const cards=firstPerGame(entries);
  for(const e of cards){
@@ -43,9 +43,10 @@ export function summarize(entries,results={},now=Date.now()){
   const payout=settled?pay/1e6:null;
   if(e.allIn==null)approx++;
   add(overall,e,payout,cost);
+  bump('trust',e.trust==='High'?'High trust':e.trust==='Solid'?'Solid':e.trust==='Lean'?'Lean':'Before trust ratings',e,payout,cost);
   bump('tier',e.proven?'Proven ✓':'Leading',e,payout,cost);
   bump('sport',e.sport||'Unknown',e,payout,cost);
-  bump('size',e.sizeMultiple>=5?'5× or more':e.sizeMultiple>=3?'3–5×':'2–3×',e,payout,cost);
+  bump('size',e.sizeMultiple>=5?'5× or more':e.sizeMultiple>=3?'3–5×':e.sizeMultiple>=2?'2–3×':'Under 2×',e,payout,cost);
   const move=Number.isFinite(e.indicative)&&Number.isFinite(e.paid)?e.indicative-e.paid:null;
   bump('price',move===null?'Unknown':move>.0201?'Price had moved up':move<-.0201?'Cheaper than they paid':'Near their price',e,payout,cost);
   bump('source',e.source==='alert'?'Alerts':'Scans',e,payout,cost);
@@ -53,7 +54,7 @@ export function summarize(entries,results={},now=Date.now()){
  }
  const tidy=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,finish(v)]).sort((a,b)=>b[1].bets-a[1].bets));
  return{version:1,generatedAt:new Date(now).toISOString(),since:cards.length?new Date(Math.min(...cards.map(e=>e.at))).toISOString():null,overall:finish(overall),
-  byTier:tidy(groups.tier),bySport:tidy(groups.sport),bySize:tidy(groups.size),byPrice:tidy(groups.price),bySource:tidy(groups.source),
+  byTrust:tidy(groups.trust),byTier:tidy(groups.tier),bySport:tidy(groups.sport),bySize:tidy(groups.size),byPrice:tidy(groups.price),bySource:tidy(groups.source),
   recent:recent.sort((a,b)=>b.game-a.game).slice(0,10),approxPriced:approx,skipped,
   note:'Paper results: $100 on the first card posted for each game, at the price shown when it was posted, held to the result. Not real bets.'};
 }
@@ -68,7 +69,7 @@ export function scoreLine(s){
 const safe=x=>String(x??'').replace(/([\\`*_{}\[\]()<>~|])/g,'\\$1').replace(/@/g,'@\u200b').slice(0,90);
 export function scorecardPayload(s){
  const block=o=>Object.entries(o||{}).slice(0,8).map(([k,g])=>`**${safe(k)}:** ${line(g)}`).join('\n')||'—';
- const fields=[{name:'By bettor tier',value:block(s.byTier)},{name:'By sport',value:block(s.bySport)},{name:'By bet size',value:block(s.bySize)},{name:'By price when posted',value:block(s.byPrice)}];
+ const fields=[{name:'By trust rating',value:block(s.byTrust)},{name:'By bettor tier',value:block(s.byTier)},{name:'By sport',value:block(s.bySport)},{name:'By bet size',value:block(s.bySize)},{name:'By price when posted',value:block(s.byPrice)}];
  if(s.recent?.length)fields.push({name:'Latest results',value:s.recent.slice(0,8).map(r=>`${r.won?'✅':'❌'} ${safe(r.outcome)} (${(100*r.cost).toFixed(0)}¢) · #${r.rank} ${safe(r.trader)}`).join('\n').slice(0,1020)});
  return{content:'[Open the Luck Society dashboard](https://lucksociety.github.io/polymarket-sharp-scanner/)',embeds:[{title:'📊 PolySharp scorecard',color:0xd4b259,
   description:`${s.since?`Since ${day(s.since)}: `:''}**${line(s.overall)}**\n${s.note}`,fields:fields.map(f=>({...f,value:f.value.slice(0,1020)}))}],allowed_mentions:{parse:[]}};

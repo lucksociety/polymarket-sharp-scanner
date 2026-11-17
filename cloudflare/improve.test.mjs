@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {collect,roster,compact,sportFit,priceMove,showable,LEADERBOARD,DEFAULTS} from './scanner.mjs';
+import {collect,roster,compact,sportFit,priceMove,showable,trust,expectedEdge,LEADERBOARD,DEFAULTS} from './scanner.mjs';
 import {selectWatchlist} from './journal.mjs';
 import {priceNote,recordLine} from './scan-report.mjs';
 import {summarize,appendLedger,firstPerGame,scoreLine,scorecardPayload} from './scorecard.mjs';
@@ -26,9 +26,27 @@ test('collector applies both rules using live game metadata',async()=>{
  const scan=await collect(get,traders,{sport:'All',limit:10,settings:{...DEFAULTS},asOf:now});
  assert.deepEqual(scan.candidates.map(p=>p.eventSlug),['nba-a-b']);assert.equal(scan.positions.find(p=>p.eventSlug==='nhl-c-d').sportFit,'weak');
 });
-test('cards from bettors ahead in the sport come before thin-record ones',()=>{
+test('trust weighs sport record, luck, bet size, agreement, opposition and price moves',()=>{
+ const base={wallet:W(1),conditionId:'c',outcomeIndex:0,sport:'NBA',netShares:1,currentValue:5000,curPrice:.5,avgPrice:.5,sizeMultiple:1,sharp:sharp()};
+ const t=(o={},rows=[])=>trust({...base,...o},[{...base,...o},...rows]);
+ assert.ok(Math.abs(expectedEdge(sharp(),'NBA')-(40*.1+20*.09)/60)<1e-9);                       // sport record blended with overall
+ assert.ok(Math.abs(expectedEdge(sharp(),'UFC')-.045)<1e-9);                                    // no sport record: half weight
+ assert.ok(Math.abs(expectedEdge(sharp({proven:false}),'UFC')-.027)<1e-9);                      // could still be luck: marked down
+ assert.equal(expectedEdge(sharp({edge:.5,bySport:{}}),'NBA'),.12);assert.equal(expectedEdge(null,'NBA'),0);
+ const plain=t();assert.equal(plain.tier,'High');assert.ok(Math.abs(plain.estWin-(.5+plain.score))<.001);assert.equal(plain.alert,true);
+ assert.ok(t({sizeMultiple:8}).score>plain.score);assert.ok(t({sizeMultiple:.6}).score<plain.score);
+ const ally={...base,wallet:W(2)},foe={...base,wallet:W(3),outcomeIndex:1};
+ assert.ok(t({},[ally]).score>plain.score);assert.equal(t({},[ally]).with,1);
+ assert.ok(t({},[foe]).score<.01);assert.equal(t({},[foe]).against,1);assert.equal(t({},[foe]).tier==='High',false);
+ assert.equal(t({},[{...foe,currentValue:50}]).against,0);                                       // scraps do not count as opposition
+ assert.ok(Math.abs(t({curPrice:.54}).score-(plain.score-.04))<1e-3);assert.equal(t({curPrice:.4}).score,plain.score);
+ const lean=t({sport:'UFC',sharp:sharp({proven:false})});assert.equal(lean.tier,'Lean');assert.equal(lean.alert,false);
+ assert.equal(t({sport:'UFC',sizeMultiple:1}).tier,'Solid');assert.equal(t({sport:'UFC',sizeMultiple:1}).alert,false);assert.equal(t({sport:'UFC',sizeMultiple:2}).alert,true);
+ assert.equal(trust({conditionId:'c'},[]),null);
+});
+test('cards are ordered by trust, not by bet size',()=>{
  const p={isGame:true,game:now+1e6,netShares:1,costKnown:true,costBook:1,conv:0,sharp:sharp()};
- const out=selectWatchlist([{...p,eventSlug:'a',sizeMultiple:9,sportFit:'thin'},{...p,eventSlug:'b',sizeMultiple:3,sportFit:'strong'}],{now});
+ const out=selectWatchlist([{...p,eventSlug:'a',sizeMultiple:9,trust:{score:.02}},{...p,eventSlug:'b',sizeMultiple:1,trust:{score:.08}}],{now});
  assert.deepEqual(out.map(x=>x.eventSlug),['b','a']);
 });
 test('price note and record line read plainly',()=>{
@@ -41,7 +59,7 @@ test('scorecard counts the first card per game, at the posted price, and leaves 
  const s=summarize(entries,{c1:[1e6,0],c2:[0,1e6],c4:[5e5,5e5],c6:[1e6,0],c5:[0,1e6]},now);
  assert.deepEqual([s.overall.bets,s.overall.wins,s.overall.losses,s.overall.pending],[3,2,1,1]);assert.equal(s.skipped,2);assert.equal(s.approxPriced,1);
  assert.ok(Math.abs(s.overall.profitPer100-(100+(-100)+100*(1/.5125-1))/3)<.01);
- assert.equal(s.bySource.Alerts.wins,1);assert.equal(s.bySize['2–3×'].bets,1);assert.equal(s.byPrice['Price had moved up'].bets,1);assert.equal(s.byTier.Leading.bets,1);
+ assert.equal(s.bySource.Alerts.wins,1);assert.equal(s.bySize['2–3×'].bets,1);assert.equal(s.byTrust['Before trust ratings'].bets,3);assert.equal(s.byPrice['Price had moved up'].bets,1);assert.equal(s.byTier.Leading.bets,1);
  assert.equal(firstPerGame(entries).filter(e=>e.gameKey==='g1')[0].runId,'r1');
  assert.equal(appendLedger([row(1)],[row(1),row(2)]).length,2);assert.equal(appendLedger(null,[row(1)]).length,1);
  assert.match(scoreLine(s),/Paper record since .*: 2-1 · \+\$\d+\.\d\d per \$100 · 1 pending/);assert.equal(scoreLine({overall:{bets:0,pending:0}}),null);assert.equal(scoreLine(null),null);
