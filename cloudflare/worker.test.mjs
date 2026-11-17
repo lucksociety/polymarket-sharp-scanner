@@ -6,13 +6,14 @@ import E from '../engine.js';
 import {convictionReport} from './discord.mjs';
 import {scanReport} from './scan-report.mjs';
 import {selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey} from './journal.mjs';
-const source=(await readFile(new URL('./worker.mjs',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default {fetch:handle};','').replace('export class PolysharpWorkflow','class PolysharpWorkflow');
+import * as Scorecard from './scorecard.mjs';
+const source=(await readFile(new URL('./worker.mjs',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default {fetch:handle,scheduled};','').replace('export class PolysharpWorkflow','class PolysharpWorkflow');
 function harness(readPublic,fetchWallet=async()=>({positions:[],activity:[]}),deps={}){
  const values=new Map(),created=[],sleeps=[];
  const env={CACHE:{get:async k=>values.has(k)?values.get(k):null,put:async(k,v)=>values.set(k,JSON.parse(v))},SCANS:{create:async x=>{created.push(x);return{};},createBatch:async x=>{created.push(...x);for(const j of x)if(j.params?.kind==='wallet')values.set('result/'+j.id,{ok:true,value:{positions:[],activity:[]}});return[];}}};
  const step={do:async(_n,options,fn)=>(fn||options)(),sleep:async(n,d)=>{sleeps.push([n,d]);},sleepUntil:async(n,d)=>{sleeps.push([n,d]);}};
- deps={rankUnique,assessOne,scanReport,selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey,...deps};
- const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet','compactWalletPage','deps','const {E,roster,collect,pool,convictionReport,editReply,rankUnique,assessOne,scanReport,selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey}=deps;'+source+';return {historyGet,launchBatch,result,PolysharpWorkflow,observeMarket,finishScan};')(class{},readPublic,fetchWallet,compactWalletPage,deps);
+ deps={rankUnique,assessOne,scanReport,selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey,...Scorecard,...deps};
+ const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet','compactWalletPage','deps','const {E,roster,collect,pool,convictionReport,editReply,rankUnique,assessOne,scanReport,selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey,LATEST,RESULTS,LEDGER,ledgerKey,alertKey,ledgerEntries,appendLedger,firstPerGame,summarize,scorecardPayload}=deps;'+source+';return {historyGet,launchBatch,result,PolysharpWorkflow,observeMarket,finishScan,scorecardJob,scheduled};')(class{},readPublic,fetchWallet,compactWalletPage,deps);
  return{...funcs,env,step,values,created,sleeps};
 }
 test('history resumes beyond one Free-plan request budget without publishing a truncated cohort',async()=>{
@@ -94,4 +95,58 @@ test('administrator verification runs the full scan path without sending any Dis
 });
 test('Cloudflare-generated long parent IDs never exceed child instance ID limits or skip roster wallets',async()=>{
  const now=Date.now(),h=harness(async()=>({}),undefined,{E,pool,roster,collect,editReply:async()=>({delivered:true})}),w=new h.PolysharpWorkflow();w.env=h.env;const output=await w.run({instanceId:'cf_'+'a'.repeat(64),payload:{source:'verification',receivedAt:now,options:validateOptions([])}},h.step);const jobs=h.created.filter(j=>j.params.kind==='wallet');assert.equal(output.complete,true);assert.equal(jobs.length,CORE.length);assert.ok(jobs.every(j=>j.id.length<=100));assert.equal(new Set(jobs.map(j=>j.id)).size,CORE.length);
+});
+
+const sharpRow=(i,o={})=>({rank:i,name:'S'+i,wallet:'0x'+String(i).padStart(40,'0'),proven:true,games:100,wins:60,losses:40,winRate:.6,avgPrice:.5,edge:.09,medianStake:500,bySport:{NBA:{games:40,wins:26,winRate:.65,edge:.1}},...o});
+const sharpPos=(i,o={})=>({wallet:'0x'+String(i).padStart(40,'0'),trader:'S'+i,asset:'asset'+i,conditionId:'0x'+'c'.repeat(63)+i,outcomeIndex:0,outcome:'Yes',title:'Game '+i,eventSlug:'nba-game-'+i,sport:'NBA',sportFit:'strong',isGame:true,game:Date.now()+3600000,netShares:1000,costKnown:true,costBook:1e6,conv:.01,remainingCost:2500,currentValue:2600,curPrice:.52,avgPrice:.5,sizeMultiple:5,sharp:sharpRow(i),lastEvent:Math.floor(Date.now()/1000)-600,...o});
+const alertHarness=(rows,sent)=>harness(async()=>{throw Error('no public calls expected');},undefined,{E,pool,convictionReport,roster:async()=>rows.map(p=>({wallet:p.wallet,name:p.trader,sharp:p.sharp})),collect:async()=>({positions:rows,candidates:rows,scannedWallets:rows.length,complete:true,warnings:[]}),editReply:async(job,payload)=>{sent.push([job.source,payload]);return{delivered:true};}});
+const alertJob=now=>({source:'alert',webhook:'https://discord.com/api/webhooks/1/x',receivedAt:now,options:{...validateOptions([]),limit:10}});
+
+test('alert scan posts only new, recently traded cards, records them in the ledger and never repeats them',async()=>{
+ const now=Date.now(),rows=[sharpPos(1),sharpPos(2,{lastEvent:Math.floor(now/1000)-9*3600})],sent=[];
+ const h=alertHarness(rows,sent);
+ const w=new h.PolysharpWorkflow();w.env=h.env;
+ const first=await w.run({instanceId:'alert-1',payload:alertJob(now)},h.step);
+ assert.equal(first.watched,1);assert.equal(sent.length,1);assert.equal(sent[0][0],'alert');
+ assert.equal(sent[0][1].embeds.length,1);assert.match(sent[0][1].embeds[0].title,/New big bet/);assert.match(sent[0][1].embeds[0].fields[0].value,/5\.0× their usual bet/);assert.match(sent[0][1].embeds[0].fields[0].value,/Still near their price/);
+ assert.ok(h.values.has(Scorecard.alertKey(rows[0])));assert.equal(h.values.has(Scorecard.alertKey(rows[1])),false);
+ const ledger=h.values.get(Scorecard.ledgerKey(now));assert.equal(ledger.length,1);assert.equal(ledger[0].source,'alert');assert.equal(ledger[0].rank,1);assert.equal(ledger[0].sizeMultiple,5);
+ const again=await w.run({instanceId:'alert-2',payload:alertJob(now+1000)},h.step);
+ assert.equal(again.mode,'alert');assert.equal(again.published,0);assert.equal(sent.length,1);
+});
+
+test('alert scan stays silent when the roster scan is incomplete or the scan fails',async()=>{
+ const now=Date.now(),sent=[],rows=[sharpPos(1)];
+ const partial=harness(async()=>{throw Error('x');},undefined,{E,pool,convictionReport,roster:async()=>[{wallet:rows[0].wallet,name:'S1',sharp:rows[0].sharp}],collect:async()=>({positions:rows,candidates:rows,scannedWallets:0,complete:false,warnings:['down']}),editReply:async(j,p)=>{sent.push(p);return{delivered:true};}});
+ let w=new partial.PolysharpWorkflow();w.env=partial.env;assert.equal((await w.run({instanceId:'alert-3',payload:alertJob(now)},partial.step)).published,0);
+ const broken=harness(async()=>{throw Error('x');},undefined,{E,pool,convictionReport,roster:async()=>{throw Error('roster down');},collect:async()=>{throw Error('no');},editReply:async(j,p)=>{sent.push(p);return{delivered:true};}});
+ w=new broken.PolysharpWorkflow();w.env=broken.env;assert.equal((await w.run({instanceId:'alert-4',payload:alertJob(now)},broken.step)).published,0);
+ assert.equal(sent.length,0);
+});
+
+test('ordinary scans also feed the ledger and show the running paper record',async()=>{
+ const now=Date.now(),rows=[sharpPos(1)],sent=[];const h=alertHarness(rows,sent);
+ h.values.set(Scorecard.LATEST,{since:new Date(now-5*864e5).toISOString(),overall:{bets:10,wins:6,losses:4,pending:2,profitPer100:7.5}});
+ const w=new h.PolysharpWorkflow();w.env=h.env;
+ await w.run({instanceId:'scan-1',payload:{applicationId:'1',token:'t',receivedAt:now,options:validateOptions([])}},h.step);
+ assert.match(sent.at(-1)[1].embeds[0].description,/Paper record since .*: 6-4 · \+\$7\.50 per \$100 · 2 pending/);
+ assert.equal(h.values.get(Scorecard.ledgerKey(now)).length,1);assert.equal(h.values.has(Scorecard.alertKey(rows[0])),false);
+});
+
+test('scorecard job settles posted cards from saved results, stores the summary and posts it only when asked',async()=>{
+ const now=Date.now(),sent=[];const h=harness(async()=>{throw Error('no public calls');},undefined,{E,pool,convictionReport,editReply:async(job,payload)=>{sent.push([job,payload]);return{delivered:true};}});
+ h.env.DASHBOARD_WEBHOOK_URL='https://discord.com/api/webhooks/1/abc';
+ const row=(i,o={})=>({runId:'r'+i,at:now-3*864e5,policy:'sharp-size-v1',source:'discord',wallet:'w'+i,trader:'T'+i,rank:i,proven:i<2,sport:'NBA',title:'G'+i,outcome:'Yes',asset:'a'+i,conditionId:'0x'+String(i).padStart(64,'0'),outcomeIndex:0,game:now-2*864e5,gameKey:'g'+i,paid:.5,indicative:.5,allIn:.5,sizeMultiple:3,...o});
+ h.values.set(Scorecard.ledgerKey(now),[row(1),row(2),row(3,{game:now+864e5}),row(4,{gameKey:'g1',runId:'later',at:now-2.5*864e5})]);
+ h.values.set(settlementKey(row(1).conditionId),{status:'resolved',payouts:[1000000,0]});
+ h.values.set(settlementKey(row(2).conditionId),{status:'resolved',payouts:[0,1000000]});
+ const quiet=await h.scorecardJob({kind:'scorecard',post:false},h.step,h.env);
+ assert.deepEqual([quiet.settled,quiet.cards,quiet.posted],[2,3,false]);assert.equal(sent.length,0);
+ const s=h.values.get(Scorecard.LATEST);assert.equal(s.overall.wins,1);assert.equal(s.overall.losses,1);assert.equal(s.overall.pending,1);assert.equal(s.overall.profitPer100,0);
+ assert.equal(s.byTier['Proven ✓'].wins,1);assert.equal(Object.keys(h.values.get(Scorecard.RESULTS)).length,2);
+ const loud=await h.scorecardJob({kind:'scorecard',post:true},h.step,h.env);assert.equal(loud.posted,true);assert.equal(sent.length,1);
+ assert.match(sent[0][1].embeds[0].description,/1-1 · \+\$0\.00 per \$100 · 1 pending/);assert.equal(JSON.stringify(sent[0][1]).includes('webhooks'),false);
+ const created=[];await h.scheduled({scheduledTime:Date.UTC(2026,10,23,13,23)},{SCANS:{create:async x=>created.push(x)}});
+ assert.equal(created[0].id,'scorecard-2026-11-23');assert.equal(created[0].params.post,true);
+ await h.scheduled({scheduledTime:Date.UTC(2026,10,24,13,23)},{SCANS:{create:async x=>created.push(x)}});assert.equal(created[1].params.post,false);
 });

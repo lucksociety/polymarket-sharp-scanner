@@ -18,6 +18,12 @@ Only the edge path reprices candidates and requires a quote at most 30 seconds o
 
 `POST /scan` lets the dashboard's SCAN button post the same default conviction card (top 10) to a Discord channel. It accepts only requests whose `Origin` is `https://lucksociety.github.io`, queues at most one run per 3-minute window (workflow ID `dash-<window>`; extra clicks get `429` with a `cooldown` in seconds), skips the progress message, and posts one new message through the channel webhook in the `DASHBOARD_WEBHOOK_URL` secret. Without that secret the route returns `503` and nothing is posted. Set it with `npx wrangler secret put DASHBOARD_WEBHOOK_URL` (Discord channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy URL). `/health` reports `dashboardRelay: true` once it is set.
 
+## Alerts and scorecard
+
+- `POST /alert` queues an alert scan (see the root README). No origin restriction; bounded to one per 10 minutes and 16 per day, and it only ever posts cards not alerted before.
+- `GET /scorecard` returns the stored paper-results summary (aggregates only) for the dashboard.
+- Cron `23 13 * * *` refreshes the scorecard daily and posts it to the channel webhook on Mondays.
+
 ## Resources
 
 - Worker: `polysharp`

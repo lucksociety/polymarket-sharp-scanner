@@ -6,8 +6,14 @@ import {handle,report,convictionReport,predictionsReport,editReply} from './disc
 import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage} from './scanner.mjs';
 
 import {predictionsRoster,fetchPredictionsWallet,rankPredictions} from './predictions.mjs';
+import {LATEST,RESULTS,LEDGER,ledgerKey,alertKey,ledgerEntries,appendLedger,firstPerGame,summarize,scorecardPayload} from './scorecard.mjs';
 
-export default {fetch:handle};
+// Daily: refresh the scorecard. Mondays: also post it to the channel.
+async function scheduled(event,env){
+ const d=new Date(event?.scheduledTime||Date.now());
+ try{await env.SCANS.create({id:'scorecard-'+d.toISOString().slice(0,10),params:{kind:'scorecard',post:d.getUTCDay()===1}});}catch{}
+}
+export default {fetch:handle,scheduled};
 const opts={retries:{limit:2,delay:'10 seconds',backoff:'exponential'},timeout:'45 seconds'};
 async function digest(text){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('').slice(0,32);}
 function durableGet(step,phase,deadline=Infinity,budget={used:0,limit:40}){
@@ -75,6 +81,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
  async run(event,step){
   const job=event.payload;
   if(job.kind==='close'||job.kind==='settlement')return observeMarket(job,step,this.env);
+  if(job.kind==='scorecard')return scorecardJob(job,step,this.env);
   if(job.kind==='wallet'||job.kind==='quote'){
    if(job.delay)await step.sleep('stagger-start',job.delay);
    let output;
@@ -116,7 +123,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
   try{
    const predictions=job.options.ranking==='predictions';
    const traders=await (predictions?predictionsRoster:roster)(get,warnings);
-   if(job.source!=='dashboard'&&job.source!=='verification')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':traders.some(t=>t.sharp)?'top-ranked sports':'tracked sports'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
+   if(job.source!=='dashboard'&&job.source!=='verification'&&job.source!=='alert')await step.do('show-progress',opts,()=>editReply(job,{content:`☘ Scanning ${traders.length} ${predictions?'smart money':traders.some(t=>t.sharp)?'top-ranked sports':'tracked sports'} wallets and current Polymarket prices. Large wallets can take several minutes; this message will update with the result.`,embeds:[],allowed_mentions:{parse:[]}}));
    const {evidence,missing,manifest}=predictions?{evidence:{history:[],clusters:{}},missing:[],manifest:[]}:await loadEvidence(step,this.env,traders,job.receivedAt);
    const historyPending=!predictions?await warmHistory(step,this.env,missing,job.receivedAt):0;
    const walletIds=new Map();
@@ -138,7 +145,15 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    }
    const scan=await collect(get,traders,{...job.options,asOf:job.receivedAt},(_fn,t)=>{if(!walletData.has(t.wallet))throw Error('Wallet unavailable after retry');return walletData.get(t.wallet);});
    if(warnings.length)scan.complete=false;warnings.push(...scan.warnings);
-   const watchlist=selectWatchlist(scan.candidates,{now:Date.now(),limit:job.options.limit});
+   let watchlist=selectWatchlist(scan.candidates,{now:Date.now(),limit:job.options.limit});
+   if(job.source==='alert'){
+    // Alerts post only ranked bettors' cards that have not been alerted before and were traded recently.
+    const recent=p=>{const t=typeof p.lastEvent==='number'?(p.lastEvent<1e12?p.lastEvent*1000:p.lastEvent):Date.parse(p.lastEvent);return !Number.isFinite(t)||job.receivedAt-t<6*3600000;};
+    const fresh=[];
+    for(const p of watchlist.filter(p=>p.sharp&&recent(p))){const seen=await step.do('alerted-'+await digest(alertKey(p)),()=>this.env.CACHE.get(alertKey(p)).then(Boolean));if(!seen)fresh.push(p);}
+    watchlist=fresh.slice(0,3);
+    if(!watchlist.length||!scan.complete)return{mode:'alert',published:0,complete:scan.complete};
+   }
    if(missing.length>historyPending)warnings.push(`${missing.length-historyPending} wallet histories are unavailable or exceeded the background budget.`);
    if(evidence.history.length===0)warnings.push('Trader history has not warmed yet. No wallet can qualify without sufficient prior observations.');
    const assessments=[];
@@ -169,6 +184,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    return await finishScan({step,env:this.env,job,runId:event.instanceId,scan,traders,watchlist,bets,assessments:[...new Map([...assessments,...freshAssessments].map(a=>[a.p.wallet+'|'+a.p.asset,a])).values()],quotes:quoteCache,evidenceManifest:manifest,historyCount:evidence.history.length,historyPending,warnings});
   }catch{
    if(job.source==='verification')return{published:0,incomplete:true,verification:true};
+   if(job.source==='alert')return{mode:'alert',published:0,incomplete:true};
    await step.do('send-failure',opts,()=>editReply(job,{content:`☘ /${job.options.ranking==='predictions'?'predictions':'polysharp'} could not finish a complete scan. No picks were promoted. Please try again shortly; public API failures or platform limits may have interrupted this run.`,embeds:[],allowed_mentions:{parse:[]}}));
    return {published:0,incomplete:true};
   }
@@ -177,7 +193,8 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
 
 async function finishScan({step,env,job,runId,scan,traders,watchlist,bets,assessments,quotes,evidenceManifest,historyCount,historyPending,warnings}){
  const snapshotAt=await step.do('paper-snapshot-time',()=>Date.now());
- const rendered=scanReport({bets:bets.filter(a=>a.p.game>snapshotAt),watchlist:watchlist.filter(p=>p.game>snapshotAt),scan,rosterCount:traders.length,ranked:traders.some(t=>t.sharp),historyCount,historyPending,options:job.options,assessments,quotes,now:snapshotAt});
+ let scorecard=null;try{scorecard=await step.do('read-scorecard',()=>env.CACHE.get(LATEST,'json'));}catch{}
+ const rendered=scanReport({scorecard,alert:job.source==='alert',bets:bets.filter(a=>a.p.game>snapshotAt),watchlist:watchlist.filter(p=>p.game>snapshotAt),scan,rosterCount:traders.length,ranked:traders.some(t=>t.sharp),historyCount,historyPending,options:job.options,assessments,quotes,now:snapshotAt});
  const key=journalKey(runId,job.receivedAt),record=freezeRun({runId,job:{...job,rosterCount:traders.length},scan,watchlist:rendered.watchlist,candidates:rendered.candidates,assessments,quotes,evidenceManifest,payload:rendered.payload,now:snapshotAt});
  const prepared=await step.do('freeze-paper-signal',opts,async()=>{if(new TextEncoder().encode(JSON.stringify(record)).length>850000)throw Error('Frozen signal exceeds safe storage size');const saved=await putPrepared(env.CACHE,key,record);return{payload:saved.payload,preparedAt:saved.preparedAt,entries:saved.entries.map(e=>({kind:e.kind,asset:e.position.asset,conditionId:e.position.conditionId,game:e.position.game,quoteAt:e.quote?.quoteAt}))};});
  const settled=new Map(),closes=new Map();
@@ -186,7 +203,28 @@ async function finishScan({step,env,job,runId,scan,traders,watchlist,bets,assess
  const receipt=await step.do('send-result',opts,()=>{if(verification)return{delivered:false,verification:true};if(prepared.entries.some(e=>e.kind==='candidate'&&(!e.quoteAt||Date.now()-e.quoteAt>30000)))throw Error('Candidate quote expired before publication');return editReply(job,prepared.payload);});
  let receiptSaved=true;
  try{await step.do('record-publication',opts,()=>env.CACHE.put(publicationKey(key),JSON.stringify({runId,delivered:receipt.delivered===true,verification,observedAt:Date.now(),trackingQueued,messageId:receipt.messageId||null,channelId:receipt.channelId||job.channelId||null})));}catch{receiptSaved=false;}
+ // Compact ledger of the ranked-bettor cards that were actually posted; the scorecard is built from it.
+ if(receipt.delivered===true){
+  const rows=ledgerEntries(record);
+  if(rows.length)try{await step.do('ledger-append',opts,async()=>{const key=ledgerKey(snapshotAt);await env.CACHE.put(key,JSON.stringify(appendLedger(await env.CACHE.get(key,'json'),rows)));return true;});}catch{}
+  if(job.source==='alert')try{await step.do('mark-alerted',opts,async()=>{for(const p of rendered.watchlist)await env.CACHE.put(alertKey(p),String(snapshotAt),{expirationTtl:14*86400});return true;});}catch{}
+ }
  return{mode:'paper',verification,published:prepared.entries.filter(e=>e.kind==='candidate').length,watched:prepared.entries.filter(e=>e.kind==='watchlist').length,complete:scan.complete,positions:scan.positions.length,wallets:scan.scannedWallets,roster:traders.length,journal:key,receiptSaved,trackingQueued};
+}
+async function scorecardJob(job,step,env){
+ const now=await step.do('scorecard-time',()=>Date.now());
+ const months=[0,1,2].map(i=>{const d=new Date(now);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()-i);return LEDGER+d.toISOString().slice(0,7);});
+ const entries=[];for(const key of months){const rows=await step.do('ledger-'+key.slice(-7),()=>env.CACHE.get(key,'json'));if(Array.isArray(rows))entries.push(...rows);}
+ const results=await step.do('scorecard-results',()=>env.CACHE.get(RESULTS,'json'))||{};
+ const need=[...new Set(firstPerGame(entries).filter(e=>e.game<now&&!results[e.conditionId]).map(e=>e.conditionId))].slice(0,150);
+ let changed=false;
+ for(const condition of need){const r=await step.do('settlement-'+condition.slice(2,34),()=>env.CACHE.get(settlementKey(condition),'json'));if(r?.status==='resolved'&&Array.isArray(r.payouts)){results[condition]=r.payouts;changed=true;}}
+ if(changed)await step.do('save-results',()=>env.CACHE.put(RESULTS,JSON.stringify(results)).then(()=>true));
+ const summary=summarize(entries,results,now);
+ await step.do('save-scorecard',()=>env.CACHE.put(LATEST,JSON.stringify(summary)).then(()=>true));
+ const webhook=String(env.DASHBOARD_WEBHOOK_URL||'');let posted=false;
+ if(job.post&&summary.overall.bets>0&&/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[\w-]+$/.test(webhook)){await step.do('post-scorecard',opts,()=>editReply({source:'dashboard',webhook},scorecardPayload(summary)));posted=true;}
+ return{mode:'scorecard',cards:summary.overall.bets+summary.overall.pending,settled:summary.overall.bets,posted};
 }
 async function observeMarket(job,step,env){
  if(job.kind==='close'){
