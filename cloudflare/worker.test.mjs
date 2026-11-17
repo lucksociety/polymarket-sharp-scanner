@@ -98,7 +98,7 @@ test('Cloudflare-generated long parent IDs never exceed child instance ID limits
 });
 
 const sharpRow=(i,o={})=>({rank:i,name:'S'+i,wallet:'0x'+String(i).padStart(40,'0'),proven:true,games:100,wins:60,losses:40,winRate:.6,avgPrice:.5,edge:.09,medianStake:500,bySport:{NBA:{games:40,wins:26,winRate:.65,edge:.1}},...o});
-const sharpPos=(i,o={})=>({wallet:'0x'+String(i).padStart(40,'0'),trader:'S'+i,asset:'asset'+i,conditionId:'0x'+'c'.repeat(63)+i,outcomeIndex:0,outcome:'Yes',title:'Game '+i,eventSlug:'nba-game-'+i,sport:'NBA',sportFit:'strong',isGame:true,game:Date.now()+3600000,netShares:1000,costKnown:true,costBook:1e6,conv:.01,remainingCost:2500,currentValue:2600,curPrice:.52,avgPrice:.5,sizeMultiple:5,sharp:sharpRow(i),lastEvent:Math.floor(Date.now()/1000)-600,...o});
+const sharpPos=(i,o={})=>({wallet:'0x'+String(i).padStart(40,'0'),trader:'S'+i,asset:'asset'+i,conditionId:'0x'+'c'.repeat(63)+i,outcomeIndex:0,outcome:'Yes',title:'Game '+i,eventSlug:'nba-game-'+i,sport:'NBA',sportFit:'strong',isGame:true,game:Date.now()+3600000,netShares:1000,costKnown:true,costBook:1e6,conv:.01,remainingCost:2500,currentValue:2600,curPrice:.52,avgPrice:.5,sizeMultiple:5,sharp:sharpRow(i),trust:{score:.1,estWin:.62,tier:'High',with:0,against:0,alert:true},lastEvent:Math.floor(Date.now()/1000)-600,...o});
 const alertHarness=(rows,sent)=>harness(async()=>{throw Error('no public calls expected');},undefined,{E,pool,convictionReport,roster:async()=>rows.map(p=>({wallet:p.wallet,name:p.trader,sharp:p.sharp})),collect:async()=>({positions:rows,candidates:rows,scannedWallets:rows.length,complete:true,warnings:[]}),editReply:async(job,payload)=>{sent.push([job.source,payload]);return{delivered:true};}});
 const alertJob=now=>({source:'alert',webhook:'https://discord.com/api/webhooks/1/x',receivedAt:now,options:{...validateOptions([]),limit:10}});
 
@@ -108,11 +108,16 @@ test('alert scan posts only new, recently traded cards, records them in the ledg
  const w=new h.PolysharpWorkflow();w.env=h.env;
  const first=await w.run({instanceId:'alert-1',payload:alertJob(now)},h.step);
  assert.equal(first.watched,1);assert.equal(sent.length,1);assert.equal(sent[0][0],'alert');
- assert.equal(sent[0][1].embeds.length,1);assert.match(sent[0][1].embeds[0].title,/New big bet/);assert.match(sent[0][1].embeds[0].fields[0].value,/5\.0× their usual bet/);assert.match(sent[0][1].embeds[0].fields[0].value,/Still near their price/);
+ assert.equal(sent[0][1].embeds.length,1);assert.match(sent[0][1].embeds[0].title,/New high-trust bet/);assert.match(sent[0][1].embeds[0].fields[0].value,/5\.0× their usual bet/);assert.match(sent[0][1].embeds[0].fields[0].value,/Still near their price/);
  assert.ok(h.values.has(Scorecard.alertKey(rows[0])));assert.equal(h.values.has(Scorecard.alertKey(rows[1])),false);
- const ledger=h.values.get(Scorecard.ledgerKey(now));assert.equal(ledger.length,1);assert.equal(ledger[0].source,'alert');assert.equal(ledger[0].rank,1);assert.equal(ledger[0].sizeMultiple,5);
+ const ledger=h.values.get(Scorecard.ledgerKey(now));assert.equal(ledger.length,1);assert.equal(ledger[0].source,'alert');assert.equal(ledger[0].rank,1);assert.equal(ledger[0].sizeMultiple,5);assert.equal(ledger[0].trust,'High');assert.equal(ledger[0].estWin,.62);
  const again=await w.run({instanceId:'alert-2',payload:alertJob(now+1000)},h.step);
  assert.equal(again.mode,'alert');assert.equal(again.published,0);assert.equal(sent.length,1);
+});
+
+test('alert scan ignores cards that are not high trust',async()=>{
+ const now=Date.now(),sent=[],rows=[sharpPos(1,{trust:{score:.01,estWin:.53,tier:'Lean',alert:false}})];const h=alertHarness(rows,sent);
+ const w=new h.PolysharpWorkflow();w.env=h.env;assert.equal((await w.run({instanceId:'alert-lean',payload:alertJob(now)},h.step)).published,0);assert.equal(sent.length,0);
 });
 
 test('alert scan stays silent when the roster scan is incomplete or the scan fails',async()=>{
