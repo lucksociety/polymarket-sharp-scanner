@@ -2,7 +2,7 @@
 // pre-game sports bets. Public Polymarket endpoints only; no keys. Run in GitHub Actions.
 import fs from 'node:fs';
 import { CORE, classify } from '../cloudflare/roster.mjs';
-import { walletRecord, rank, specialists, RULES, SPORT_RULES, POLICY } from './leaderboard-stats.mjs';
+import { walletRecord, rank, specialists, score, median, RULES, SPORT_RULES, POLICY } from './leaderboard-stats.mjs';
 
 const DATA = 'https://data-api.polymarket.com', GAMMA = 'https://gamma-api.polymarket.com';
 const WINDOW_DAYS = 180, MAX_PAGES = +process.env.MAX_PAGES || 40, MAX_WALLETS = +process.env.MAX_WALLETS || 400;
@@ -164,8 +164,10 @@ fs.mkdirSync('data', { recursive: true });
 if (!process.env.PROBE) fs.writeFileSync('data/leaderboard.json', JSON.stringify(out, null, 1));
 if (!process.env.PROBE) fs.writeFileSync(LISTED, JSON.stringify(Object.fromEntries(Object.entries(spec.listed).sort()), null, 1));
 if (process.env.PROBE) fs.writeFileSync('data/probe.json', JSON.stringify({ generatedAt: out.generatedAt, counts: out.counts, luck: out.luck, warnings, sources: Object.entries(records.reduce((m, r) => { m[r.source] = (m[r.source] || 0) + 1; return m; }, {})),
-  pairs: spec.pairs.map((p) => ({ name: p.w.name, wallet: p.w.wallet, source: records.find((r) => r.wallet === p.w.wallet)?.source, sport: p.sport, games: p.r.games, wins: p.r.wins, avgPrice: round(p.r.avgPrice), edge: round(p.r.edge), se: round(p.r.se), z: round(p.r.edge / p.r.se, 2), roi: round(p.r.roi),
-    older: round(p.r.olderEdge), newer: round(p.r.newerEdge), spanDays: round(p.r.spanDays, 0), lastGameAt: p.r.lastGameAt, lastBuyAt: p.w.lastBuyAt, adj: round(p.adj), credit: round(p.credit), proven: p.proven === true, listable: !!p.listable, medianStake: round(p.w.medianStake, 0), truncated: !!records.find((r) => r.wallet === p.w.wallet)?.truncated })) }));
+  pairs: spec.pairs.map((p) => { const mine = p.w.bets.filter((b) => b.sport === p.sport), lead = (b) => (b.gameAt - b.boughtAt) / 36e5;
+    const part = (lo, hi = Infinity) => { const s = score(mine.filter((b) => lead(b) >= lo && lead(b) < hi)); return s.games ? { games: s.games, wins: s.wins, avgPrice: round(s.avgPrice), edge: round(s.edge), se: round(s.se), z: s.se > 0 ? round(s.edge / s.se, 2) : null, roi: round(s.roi) } : { games: 0 }; };
+    return { leadMedianH: round(median(mine.map(lead)), 2), lt1h: part(0, 1), h1to3: part(1, 3), h3to12: part(3, 12), h12plus: part(12), early2h: part(2), early6h: part(6), name: p.w.name, wallet: p.w.wallet, source: records.find((r) => r.wallet === p.w.wallet)?.source, sport: p.sport, games: p.r.games, wins: p.r.wins, avgPrice: round(p.r.avgPrice), edge: round(p.r.edge), se: round(p.r.se), z: round(p.r.edge / p.r.se, 2), roi: round(p.r.roi),
+    older: round(p.r.olderEdge), newer: round(p.r.newerEdge), spanDays: round(p.r.spanDays, 0), lastGameAt: p.r.lastGameAt, lastBuyAt: p.w.lastBuyAt, adj: round(p.adj), credit: round(p.credit), proven: p.proven === true, listable: !!p.listable, medianStake: round(p.w.medianStake, 0), truncated: !!records.find((r) => r.wallet === p.w.wallet)?.truncated }; }) }));
 const pct = (x) => (x == null ? '—' : (100 * x).toFixed(1));
 console.log(`\n${out.counts.qualified} of ${records.length} scored wallets qualify. Top ${sharps.length}:`);
 for (const r of out.sharps) console.log(`#${String(r.rank).padStart(2)} ${r.name.padEnd(28)} ${String(r.wins).padStart(3)}-${String(r.losses).padEnd(3)} win ${pct(r.winRate)}% at avg ${pct(r.avgPrice)}¢ | edge +${pct(r.edge)} (low ${pct(r.edgeLower)}) | roi ${pct(r.roi)}% | halves ${pct(r.olderEdge)}/${pct(r.newerEdge)} | median bet $${Math.round(r.medianStake)} | ${r.proven ? 'PROVEN' : 'leading'} | ${r.source}${r.truncated ? ' | truncated' : ''}`);

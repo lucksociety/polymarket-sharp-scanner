@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,7 +26,7 @@ jobs:
           PROBE: '1'
           DISCOVER_WIDE: '1'
           DISCOVER_DEPTH: '1000'
-          MAX_WALLETS: '2500'
+          MAX_WALLETS: '7500'
         run: node scripts/leaderboard.mjs
       - name: Save probe result on this branch
         if: startsWith(github.ref_name, 'probe/')
