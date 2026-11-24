@@ -9,30 +9,34 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: leaderboard
+  group: leaderboard-probe
   cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/leaderboard-stats.test.mjs
-      - name: Score wallets on their last 180 days of pre-game sports bets
+      - name: Score one slice of the wide wallet pool
         env:
           PROBE: '1'
           DISCOVER_WIDE: '1'
           DISCOVER_DEPTH: '1000'
-          MAX_WALLETS: '7500'
-        run: node scripts/leaderboard.mjs
+          MAX_WALLETS: '1800'
+          SHARD: ${{ matrix.shard }}
+          NODE_OPTIONS: --max-old-space-size=10000
+        run: WALLET_OFFSET=$(( ${{ matrix.shard }} * 1800 )) node scripts/leaderboard.mjs
       - name: Save probe result on this branch
-        if: startsWith(github.ref_name, 'probe/')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/probe.json
-          git diff --cached --quiet || git commit -m "probe: wide discovery $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push
+          git add data/probe-*.json
+          git diff --cached --quiet || git commit -m "probe: wide discovery shard ${{ matrix.shard }} $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3 4 5; do git pull --rebase --autostash origin "${{ github.ref_name }}" && git push && break; sleep $((RANDOM % 20 + 5)); done

@@ -70,7 +70,8 @@ async function discover() {
       console.log(`wide ${category}/${period}/${sort}: ${got} rows, ${added} new, total ${known.size}`);
     }
   }
-  return [...known.values()].slice(0, MAX_WALLETS);
+  const off = +process.env.WALLET_OFFSET || 0;
+  return [...known.values()].slice(off, off + MAX_WALLETS);
 }
 
 const wallets = await discover();
@@ -163,7 +164,7 @@ if (records.length < wallets.length * 0.8 || !payouts.size) { console.error('Too
 fs.mkdirSync('data', { recursive: true });
 if (!process.env.PROBE) fs.writeFileSync('data/leaderboard.json', JSON.stringify(out, null, 1));
 if (!process.env.PROBE) fs.writeFileSync(LISTED, JSON.stringify(Object.fromEntries(Object.entries(spec.listed).sort()), null, 1));
-if (process.env.PROBE) fs.writeFileSync('data/probe.json', JSON.stringify({ generatedAt: out.generatedAt, counts: out.counts, luck: out.luck, warnings, sources: Object.entries(records.reduce((m, r) => { m[r.source] = (m[r.source] || 0) + 1; return m; }, {})),
+if (process.env.PROBE) fs.writeFileSync(`data/probe-${process.env.SHARD || 0}.json`, JSON.stringify({ generatedAt: out.generatedAt, counts: out.counts, luck: out.luck, warnings, sources: Object.entries(records.reduce((m, r) => { m[r.source] = (m[r.source] || 0) + 1; return m; }, {})),
   pairs: spec.pairs.map((p) => { const mine = p.w.bets.filter((b) => b.sport === p.sport), lead = (b) => (b.gameAt - b.boughtAt) / 36e5;
     const part = (lo, hi = Infinity) => { const s = score(mine.filter((b) => lead(b) >= lo && lead(b) < hi)); return s.games ? { games: s.games, wins: s.wins, avgPrice: round(s.avgPrice), edge: round(s.edge), se: round(s.se), z: s.se > 0 ? round(s.edge / s.se, 2) : null, roi: round(s.roi) } : { games: 0 }; };
     return { leadMedianH: round(median(mine.map(lead)), 2), lt1h: part(0, 1), h1to3: part(1, 3), h3to12: part(3, 12), h12plus: part(12), early2h: part(2), early6h: part(6), name: p.w.name, wallet: p.w.wallet, source: records.find((r) => r.wallet === p.w.wallet)?.source, sport: p.sport, games: p.r.games, wins: p.r.wins, avgPrice: round(p.r.avgPrice), edge: round(p.r.edge), se: round(p.r.se), z: round(p.r.edge / p.r.se, 2), roi: round(p.r.roi),
