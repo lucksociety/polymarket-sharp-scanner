@@ -97,6 +97,19 @@ export function compactWalletPage(page){
  if(!Array.isArray(page?.data))return page;
  return {...page,data:page.data.filter(p=>!p.redeemable).map(p=>p.current_price>.002&&p.current_price<.998&&p.current_value>=1?p:pick(p,['token_id','current_size','entry_cost_usdc','redeemable','current_price','current_value','opposite_token_id']))};
 }
+// A wallet's scan result travels between Workflow steps, which may not exceed 1 MiB. So each position drops the raw API fields that
+// E.position() already copied under other names, and the bettor's record is attached later by collect() instead of being repeated
+// on every position. (On 24 Nov 2026 one 598-position wallet reached 1.16 MB, which made every scan incomplete and stopped all alerts.)
+const RAW=['token_id','condition_id','current_size','avg_price','current_price','current_value','entry_cost_usdc','total_cost_usdc','event_slug','outcome_index','end_date','first_entry_at','last_event_at','opposite_token_id'];
+const slim=p=>{const o={...p};for(const k of RAW)delete o[k];if(typeof o.title==='string'&&o.title.length>120)o.title=o.title.slice(0,120);return o;};
+/** Last resort for an enormous wallet: drop its smallest positions until the result fits. Size and hedge figures were computed before this. */
+export function fitResult(value,limit=800000){
+ const bytes=v=>new TextEncoder().encode(JSON.stringify(v)).length;
+ if(!Array.isArray(value?.positions)||bytes(value)<=limit)return value;
+ let out=value;
+ for(let floor=5;floor<1e7&&bytes(out)>limit;floor*=2)out={...value,positions:value.positions.filter(p=>(p.currentValue||0)>=floor),trimmedBelow:floor};
+ return out;
+}
 export async function fetchWallet(t,get,asOf){
  const raw=await E.pages(async url=>{
   const page=await get(url);
@@ -110,7 +123,7 @@ export async function fetchWallet(t,get,asOf){
   })};
  },`${DATA}/v2/positions?user=${t.wallet}&status=OPEN&limit=1000&filter_type=TOKENS&filter_amount=0&sort_by=CURRENT_VALUE`,{maxPages:200});
  const activity=await E.pages(get,`${DATA}/v2/activity?user=${t.wallet}&type=TRADE&start=${Math.floor(asOf/1000)-DEFAULTS.freshMinutes*60}&end=${Math.floor(asOf/1000)}&sort_direction=DESC&limit=1000`,{maxPages:20});
- const positions=E.exposure(raw.filter(p=>!p.redeemable)).filter(p=>p.curPrice>.002&&p.curPrice<.998&&p.currentValue>=1).map(p=>({...p,wallet:t.wallet,trader:t.name,spec:t.spec,scanAt:asOf,...(t.sharp?{sharp:t.sharp,sizeMultiple:Number.isFinite(p.remainingCost)?p.remainingCost/t.sharp.medianStake:null}:{})}));
+ const positions=E.exposure(raw.filter(p=>!p.redeemable)).filter(p=>p.curPrice>.002&&p.curPrice<.998&&p.currentValue>=1).map(p=>({...slim(p),wallet:t.wallet,trader:t.name,scanAt:asOf,...(t.sharp?{sizeMultiple:Number.isFinite(p.remainingCost)?p.remainingCost/t.sharp.medianStake:null}:{})}));
  const assets=new Set(positions.map(p=>p.asset));
  return {positions,activity:activity.filter(a=>assets.has(a.token_id)).map(a=>pick(a,['token_id','type','side','size','timestamp','price']))};
 }
@@ -123,7 +136,7 @@ export const sharpFloor=(p,settings)=>settings.minSharpValue??Math.max(SHARP.min
 export const bigEnough=(p,settings)=>p.currentValue>=(p.sharp?sharpFloor(p,settings):settings.minValue);
 export async function collect(get,traders,options,onWallet=async fn=>fn()){
  const warnings=[],asOf=options.asOf||Date.now(),activities={};let scannedWallets=0;
- const lists=await pool(traders,3,async t=>{try{const value=await onWallet(()=>fetchWallet(t,get,asOf),t);activities[t.wallet]=value.activity;scannedWallets++;return value.positions;}catch{warnings.push(t.name+': complete positions/activity unavailable');return [];}});
+ const lists=await pool(traders,3,async t=>{try{const value=await onWallet(()=>fetchWallet(t,get,asOf),t);activities[t.wallet]=value.activity;scannedWallets++;return value.positions.map(p=>({...p,spec:t.spec,...(t.sharp?{sharp:t.sharp}:{})}));}catch{warnings.push(t.name+': complete positions/activity unavailable');return [];}});
  const positions=lists.flat();
  // Only potential recommendations need game metadata. The full positions array still supplies every supporter and opponent.
  const metadataRows=positions.filter(p=>p.netShares>0&&p.outcomeIndex!==999&&bigEnough(p,options.settings)&&convinced(p,options.settings));
