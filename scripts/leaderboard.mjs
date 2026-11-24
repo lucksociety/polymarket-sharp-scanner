@@ -1,7 +1,7 @@
 // Builds data/leaderboard.json: every tracked or discovered wallet scored on its last 180 days of
 // pre-game sports bets. Public Polymarket endpoints only; no keys. Run in GitHub Actions.
 import fs from 'node:fs';
-import { CORE, classify } from '../cloudflare/roster.mjs';
+import { CORE, UNCOPYABLE, classify } from '../cloudflare/roster.mjs';
 import { walletRecord, rank, specialists, RULES, SPORT_RULES, POLICY } from './leaderboard-stats.mjs';
 
 const DATA = 'https://data-api.polymarket.com', GAMMA = 'https://gamma-api.polymarket.com';
@@ -51,7 +51,7 @@ async function discover() {
       console.log(`discovery ${category}/${period}: ${lb.data.length} rows, ${added} new`);
     } catch (e) { warnings.push(`Leaderboard ${category}/${period} unavailable: ${e.message}`); }
   }
-  return [...known.values()].slice(0, MAX_WALLETS);
+  return [...known.values()].filter((t) => !UNCOPYABLE.has(t.wallet)).slice(0, MAX_WALLETS);
 }
 
 const wallets = await discover();

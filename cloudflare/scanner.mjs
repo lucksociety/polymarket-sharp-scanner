@@ -6,7 +6,7 @@ export const DATA='https://data-api.polymarket.com',GAMMA='https://gamma-api.pol
 // Daily bettor leaderboard built by scripts/leaderboard.mjs (GitHub Actions) and committed to main.
 export const LEADERBOARD='https://raw.githubusercontent.com/lucksociety/polymarket-sharp-scanner/main/data/leaderboard.json';
 // A ranked bettor's bet counts when it is at least their usual size and worth $200 or more.
-export const SHARP={minMultiple:1,minValue:200,maxAgeDays:4,minListed:5,maxWallets:60,maxCredit:.08};
+export const SHARP={minMultiple:1,minValue:200,minSmall:25,maxAgeDays:4,minListed:5,maxWallets:60,maxCredit:.08};
 // A bettor's record in one sport, from the daily leaderboard. null when they are not listed in that sport.
 export const sportRecord=(s,sport)=>s?.sports?.[sport]||null;
 // Edge credited to a bettor in this sport. It comes from their record in that sport only, already marked down for luck by the
@@ -22,9 +22,9 @@ export function expectedEdge(s,sport){
  *  Lean   = anything else that is still positive. Lean bets are not posted. */
 export function trust(p,rows,settings={}){
  if(!p.sharp)return null;
- const floor=settings.minSharpValue??SHARP.minValue,seen=new Set([p.wallet]);let withE=0,againstE=0,withN=0,againstN=0;
+ const seen=new Set([p.wallet]);let withE=0,againstE=0,withN=0,againstN=0;
  for(const x of rows){
-  if(x.conditionId!==p.conditionId||!x.sharp||!(x.netShares>0)||!((x.currentValue||0)>=floor)||seen.has(x.wallet))continue;
+  if(x.conditionId!==p.conditionId||!x.sharp||!(x.netShares>0)||!((x.currentValue||0)>=sharpFloor(x,settings))||seen.has(x.wallet))continue;
   const e=expectedEdge(x.sharp,p.sport);if(!(e>0))continue;seen.add(x.wallet);                  // only bettors listed in this sport count
   if(x.outcomeIndex===p.outcomeIndex){withE+=.5*e;withN++;}else{againstE+=e;againstN++;}
  }
@@ -116,8 +116,11 @@ export async function fetchWallet(t,get,asOf){
 }
 // Ranked bettors: a bet at least their usual size counts (how much bigger feeds the trust score). Unranked wallets keep the open-book share.
 export const convinced=(p,settings)=>p.sharp?p.sizeMultiple>=(settings.minMultiple??SHARP.minMultiple):p.conv>=settings.minCostShare;
-// A ranked bettor's bet has to be a real bet for them ($200 and at least their usual size); unranked wallets keep the $1,000 floor.
-export const bigEnough=(p,settings)=>p.currentValue>=(p.sharp?(settings.minSharpValue??SHARP.minValue):settings.minValue);
+// A ranked bettor's bet has to be a real bet for them: at least their usual size (see convinced) and worth their usual bet in dollars,
+// between $25 and $200. Many of the best records belong to small bettors, so a flat $200 floor would hide nearly all their bets.
+// Unranked wallets keep the $1,000 floor.
+export const sharpFloor=(p,settings)=>settings.minSharpValue??Math.max(SHARP.minSmall,Math.min(SHARP.minValue,p.sharp?.medianStake||SHARP.minValue));
+export const bigEnough=(p,settings)=>p.currentValue>=(p.sharp?sharpFloor(p,settings):settings.minValue);
 export async function collect(get,traders,options,onWallet=async fn=>fn()){
  const warnings=[],asOf=options.asOf||Date.now(),activities={};let scannedWallets=0;
  const lists=await pool(traders,3,async t=>{try{const value=await onWallet(()=>fetchWallet(t,get,asOf),t);activities[t.wallet]=value.activity;scannedWallets++;return value.positions;}catch{warnings.push(t.name+': complete positions/activity unavailable');return [];}});

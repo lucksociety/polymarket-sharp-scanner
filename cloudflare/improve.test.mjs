@@ -96,3 +96,14 @@ test('ledger rows carry the bettor\'s rank and proven flag in that sport, under 
  assert.equal(r.rank,4);assert.equal(r.proven,true);assert.equal(r.policy,'sharp-sport-v2');
  const [o]=ledgerEntries({runId:'r',preparedAt:now,entries:[{kind:'watchlist',position:{...pos,sharp:{rank:9,proven:false}}}]});assert.equal(o.rank,9);assert.equal(o.proven,false);
 });
+import {bigEnough,sharpFloor,SHARP} from './scanner.mjs';
+import {CORE as ROSTER,UNCOPYABLE} from './roster.mjs';
+test('a small bettor\'s usual bet counts; the dollar floor follows their usual size between $25 and $200',()=>{
+ const p=(median,value)=>({sharp:{medianStake:median},currentValue:value});
+ assert.equal(sharpFloor(p(50),DEFAULTS),50);assert.equal(sharpFloor(p(5),DEFAULTS),SHARP.minSmall);assert.equal(sharpFloor(p(9000),DEFAULTS),SHARP.minValue);
+ assert.equal(bigEnough(p(50,60),DEFAULTS),true);assert.equal(bigEnough(p(50,40),DEFAULTS),false);assert.equal(bigEnough(p(9000,150),DEFAULTS),false);assert.equal(bigEnough({currentValue:500},DEFAULTS),false);
+});
+test('roster wallets are unique and valid, and the uncopyable list is well formed',()=>{
+ const ws=ROSTER.map(t=>t.wallet.toLowerCase());assert.equal(new Set(ws).size,ws.length);assert.ok(ws.every(w=>/^0x[0-9a-f]{40}$/.test(w)));
+ assert.ok(UNCOPYABLE.size>0);assert.ok([...UNCOPYABLE].every(w=>/^0x[0-9a-f]{40}$/.test(w)));
+});
