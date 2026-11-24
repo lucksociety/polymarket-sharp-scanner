@@ -22,7 +22,7 @@ jobs:
           path: .alert-state.json
           key: alert-state-${{ github.run_id }}
           restore-keys: alert-state-
-      - run: node scripts/watch.mjs
+      - run: node scripts/diag.mjs
       - uses: actions/cache/save@v4
         if: always()
         with:
