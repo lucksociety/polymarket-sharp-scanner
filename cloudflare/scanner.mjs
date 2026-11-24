@@ -106,8 +106,9 @@ const slim=p=>{const o={...p};for(const k of RAW)delete o[k];if(typeof o.title==
 export function fitResult(value,limit=800000){
  const bytes=v=>new TextEncoder().encode(JSON.stringify(v)).length;
  if(!Array.isArray(value?.positions)||bytes(value)<=limit)return value;
- let out=value;
- for(let floor=5;floor<1e7&&bytes(out)>limit;floor*=2)out={...value,positions:value.positions.filter(p=>(p.currentValue||0)>=floor),trimmedBelow:floor};
+ const sorted=[...value.positions].sort((x,y)=>(y.currentValue||0)-(x.currentValue||0));let lo=0,hi=sorted.length;
+ while(lo<hi){const mid=(lo+hi+1)>>1;if(bytes({...value,positions:sorted.slice(0,mid),trimmedBelow:0})<=limit)lo=mid;else hi=mid-1;}
+ const kept=sorted.slice(0,lo),out={...value,positions:kept,trimmedBelow:kept.length?kept.at(-1).currentValue||0:null};
  return out;
 }
 export async function fetchWallet(t,get,asOf){
