@@ -11,3 +11,8 @@ console.log('DIAG', JSON.stringify({ wallets: traders.length, ranked: traders.fi
 console.log('DIAG top wallets by metadata rows', JSON.stringify(Object.entries(perWallet).sort((a, b) => b[1].meta - a[1].meta).slice(0, 12)));
 const recent = (p) => { const t = typeof p.lastEvent === 'number' ? (p.lastEvent < 1e12 ? p.lastEvent * 1000 : p.lastEvent) : Date.parse(p.lastEvent); return !Number.isFinite(t) || Date.now() - t < 6 * 3600000; };
 for (const p of selectWatchlist(scan.candidates, { limit: 20, keep: postable })) console.log('DIAG card', p.sport, p.trader, '|', p.title, '|', p.outcome, '|', p.trust.tier, 'alert', p.trust.alert, 'recent', recent(p), 'x' + p.sizeMultiple?.toFixed(1), '$' + Math.round(p.currentValue), 'paid', p.avgPrice, 'now', p.curPrice, 'starts in h', ((p.game - Date.now()) / 36e5).toFixed(1));
+// Size of each wallet's scan result as the worker would store it (a Workflow step result may not exceed 1 MiB).
+import { fetchWallet } from '../cloudflare/scanner.mjs';
+const sizes = [];
+for (const t of traders) { try { const v = await fetchWallet(t, get, opts.asOf); const full = Buffer.byteLength(JSON.stringify(v)), slim = Buffer.byteLength(JSON.stringify({ ...v, positions: v.positions.map(({ sharp, ...p }) => p) })); sizes.push([t.name, v.positions.length, full, slim]); } catch (e) { sizes.push([t.name, -1, 0, 0]); } }
+console.log('DIAG sizes (name, positions, bytes with record, bytes without)', JSON.stringify(sizes.sort((a, b) => b[2] - a[2]).slice(0, 8)), 'over 1MiB:', sizes.filter((s) => s[2] > 1048576).length, 'total', sizes.reduce((a, s) => a + s[2], 0));
