@@ -78,3 +78,8 @@ test('record since listing uses only bets placed after the listing date, and fla
   const kept = specialists([{ name: 'k', wallet: '0x' + 'c'.repeat(40), bets: [], overall: score([]), medianStake: 1, lastBuyAt: now }], now, { 'x|NBA': 5 });
   assert.equal(kept.listed['x|NBA'], 5);                                            // listing dates are never rewritten
 });
+test('the proven bar rises with the number of records that were screened to find the bettors', () => {
+  assert.deepEqual(discoveries([0.001, 0.5], 0.2), [true, false]);
+  assert.deepEqual(discoveries([0.001, 0.5], 0.2, 3000), [false, false]);
+  assert.deepEqual(discoveries([0.00001, 0.5], 0.2, 3000), [true, false]);
+});

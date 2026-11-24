@@ -61,8 +61,10 @@ export function rank(records, rules = RULES) {
 //     (empirical Bayes; the spread of real skill is estimated from all records together).
 //  2. "proven" is decided across all records at once (false-discovery control), so it means "too good to be luck even
 //     after allowing for how many bettors were looked at", not just "good on its own".
+// `screened`: the roster includes bettors hand-picked from a 24 Nov 2026 search of 7,042 wallets (3,233 sport records with 30+ early
+// bets). "Proven" has to allow for all of those, or the picked bettors would look proven simply for having been picked.
 export const SPORT_RULES = { minGames: 30, minSpanDays: 30, maxIdleDays: 21, sportIdleDays: 45, perSport: 12, maxWallets: 60,
-  minAdj: 0.005, fdr: 0.2, popMinGames: 20, coldMinGames: 20, maxCredit: 0.08, z: 1.645, feeRate: 0.05 };
+  minAdj: 0.005, fdr: 0.2, screened: 3233, popMinGames: 20, coldMinGames: 20, maxCredit: 0.08, z: 1.645, feeRate: 0.05 };
 
 // Upper tail of the standard normal (Abramowitz & Stegun 7.1.26; accurate to about 1e-7).
 export function upperTail(z) {
@@ -86,9 +88,10 @@ export function shrink(edge, se, prior) {
   return { adj: k * edge + (1 - k) * prior.mu, sd: Math.sqrt(k) * se };
 }
 /** Benjamini-Hochberg: which of these p-values still count once all of them are considered together. */
-export function discoveries(ps, q) {
+export function discoveries(ps, q, screened = 0) {
+  const m = Math.max(ps.length, screened);       // the bar is set by how many records were really looked through, not only today's
   const order = ps.map((p, i) => [p, i]).sort((a, b) => a[0] - b[0]); let cut = -1;
-  order.forEach(([p], k) => { if (p <= q * (k + 1) / ps.length) cut = k; });
+  order.forEach(([p], k) => { if (p <= q * (k + 1) / m) cut = k; });
   const out = ps.map(() => false); for (let k = 0; k <= cut; k++) out[order[k][1]] = true;
   return out;
 }
@@ -122,7 +125,7 @@ export function specialists(wallets, now, listed = {}, rules = SPORT_RULES) {
     for (const [sport, r] of Object.entries(bySport)) if (sport !== 'Non-sports' && r.games >= rules.popMinGames && r.se > 0) pairs.push({ w, sport, r });
   }
   const prior = skillPrior(pairs.map((p) => p.r));
-  const testable = pairs.filter((p) => p.r.games >= rules.minGames), found = discoveries(testable.map((p) => upperTail(p.r.edge / p.r.se)), rules.fdr);
+  const testable = pairs.filter((p) => p.r.games >= rules.minGames), found = discoveries(testable.map((p) => upperTail(p.r.edge / p.r.se)), rules.fdr, rules.screened);
   testable.forEach((p, i) => { p.proven = found[i]; });
   for (const p of pairs) {
     const { adj, sd } = shrink(p.r.edge, p.r.se, prior); p.adj = adj; p.adjSd = sd;
