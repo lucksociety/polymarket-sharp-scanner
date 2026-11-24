@@ -78,16 +78,22 @@ export const CORE = [
   {"name":"lonmi2511","wallet":"0x997cb45c25e94b4ee58c234ce1f211496a0d51f3","spec":"Esports · lifetime realized +$56K · pregame sample 65% wins"},
 ];
 export function classify(tags, slug){
-  const t = new Set(tags); const s = slug||"";
-  if (t.has("nfl") || s.startsWith("nfl-")) return "NFL";
-  if (t.has("nba") || s.startsWith("nba-")) return "NBA";
-  if (t.has("nhl") || s.startsWith("nhl-")) return "NHL";
-  if (t.has("mlb") || s.startsWith("mlb-")) return "MLB";
-  if (t.has("ufc") || t.has("mma") || s.startsWith("ufc-")) return "UFC";
-  if (t.has("league-of-legends") || t.has("lol") || s.startsWith("lol-")) return "LoL";
-  if (t.has("tennis") || s.startsWith("atp-") || s.startsWith("wta-")) return "Tennis";
-  if (t.has("soccer")) return "Soccer";
-  if (t.has("sports") || t.has("esports") || t.has("games")) return "Other sports";
+  const t = new Set(tags); const s = slug||""; const has = (...xs) => xs.some(x => t.has(x)); const pre = (...xs) => xs.some(x => s.startsWith(x));
+  // College and individual esports titles are checked first so they no longer share one "Other sports" bucket.
+  if (has("cfb","ncaaf","ncaa-football","college-football") || pre("cfb-","ncaaf-")) return "College football";
+  if (has("cbb","ncaab","ncaa-basketball","college-basketball","march-madness","cwbb") || pre("cbb-","ncaab-","cwbb-")) return "College basketball";
+  if (has("nfl") || pre("nfl-")) return "NFL";
+  if (has("nba") || pre("nba-")) return "NBA";
+  if (has("nhl") || pre("nhl-")) return "NHL";
+  if (has("mlb") || pre("mlb-")) return "MLB";
+  if (has("ufc","mma") || pre("ufc-")) return "UFC";
+  if (has("league-of-legends","lol") || pre("lol-")) return "LoL";
+  if (has("counter-strike","counter-strike-2","cs2","csgo") || pre("cs2-","csgo-")) return "CS2";
+  if (has("valorant") || pre("val-","valorant-")) return "Valorant";
+  if (has("dota-2","dota2","dota") || pre("dota2-","dota-")) return "Dota 2";
+  if (has("tennis") || pre("atp-","wta-")) return "Tennis";
+  if (has("soccer")) return "Soccer";
+  if (has("sports","esports","games")) return "Other sports";
   return "Non-sports";
 }
-export const SPORTS=["All","NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","LoL","Other sports"];
+export const SPORTS=["All","NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","College football","College basketball","LoL","CS2","Valorant","Dota 2","Other sports"];

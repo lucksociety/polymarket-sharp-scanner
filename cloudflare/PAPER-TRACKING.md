@@ -1,5 +1,7 @@
 # Sports scanner: candidates and watched positions
 
+> **Policy `sharp-sport-v2` (24 Nov 2026).** Bettors are listed sport by sport and each edge is marked down for luck (see the root README). A bet earns credit only inside a sport the bettor is listed in, must be at least their usual size, and is posted only when rated High or Solid; Lean bets are held back. The scorecard reports cards chosen under these rules separately from earlier ones (`byRules`) and adds results by bettor (`byBettor`).
+>
 > **Policy `sharp-trust-v1` (17 Nov 2026).** Bet size is no longer a gate. Any real bet from a ranked bettor is scored for trust (see the root README) and cards are ordered by that score. Ledger rows carry the trust rating and estimated win chance; the scorecard reports results by rating.
 >
 > **Policy `sharp-size-v2` (17 Nov 2026).** Adds two filters for ranked bettors: no card in a sport where the bettor is behind price over 20+ bets, and no card when the price is more than 6¢ above the bettor's entry. Alert-triggered posts are journalled with source `alert`. A compact ledger (`ledger/v1/<month>`) and daily scorecard (`scorecard/v1/latest`) are derived from posted cards.

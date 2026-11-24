@@ -5,36 +5,43 @@ export {CORE,SPORTS};
 export const DATA='https://data-api.polymarket.com',GAMMA='https://gamma-api.polymarket.com',CLOB='https://clob.polymarket.com';
 // Daily bettor leaderboard built by scripts/leaderboard.mjs (GitHub Actions) and committed to main.
 export const LEADERBOARD='https://raw.githubusercontent.com/lucksociety/polymarket-sharp-scanner/main/data/leaderboard.json';
-export const SHARP={minMultiple:.5,minValue:200,maxAgeDays:4,minListed:5};
-// How much a ranked bettor is expected to beat the price in this sport: their record in the sport blended with their overall
-// record (a thin sport record counts for less), marked down when the overall record could still be luck, and capped.
+// A ranked bettor's bet counts when it is at least their usual size and worth $200 or more.
+export const SHARP={minMultiple:1,minValue:200,maxAgeDays:4,minListed:5,maxWallets:60,maxCredit:.08};
+// A bettor's record in one sport, from the daily leaderboard. null when they are not listed in that sport.
+export const sportRecord=(s,sport)=>s?.sports?.[sport]||null;
+// Edge credited to a bettor in this sport. It comes from their record in that sport only, already marked down for luck by the
+// leaderboard job. Outside the sports they are listed in, or once they have clearly lost since being listed, it is zero.
 export function expectedEdge(s,sport){
- if(!s||!Number.isFinite(s.edge))return 0;
- const r=s.bySport?.[sport],base=r?(r.games*r.edge+20*s.edge)/(r.games+20):.5*s.edge;
- return Math.max(-.12,Math.min(.12,base*(s.proven?1:.6)));
+ const r=sportRecord(s,sport);
+ return r&&!r.cold&&Number.isFinite(r.credit)?Math.max(0,Math.min(SHARP.maxCredit,r.credit)):0;
 }
-/** Trust in one bet: the bettor's expected edge, raised for a bigger-than-usual bet and for other ranked bettors on the same side,
- *  lowered for ranked bettors on the other side and for any rise in price since the bettor bought. `rows` are all scanned positions. */
+/** Trust in one bet: the bettor's credited edge in this sport, raised for a bigger-than-usual bet and for other listed bettors in the
+ *  sport on the same side, lowered for listed bettors on the other side and for any rise in price since the bettor bought.
+ *  High   = a record too good to be luck, a bet at least their usual size, nobody listed against.
+ *  Solid  = positive after all of the above, and either proven, at least twice their usual bet, or backed by another listed bettor.
+ *  Lean   = anything else that is still positive. Lean bets are not posted. */
 export function trust(p,rows,settings={}){
  if(!p.sharp)return null;
  const floor=settings.minSharpValue??SHARP.minValue,seen=new Set([p.wallet]);let withE=0,againstE=0,withN=0,againstN=0;
  for(const x of rows){
-  if(x.conditionId!==p.conditionId||!x.sharp||!(x.netShares>0)||!((x.currentValue||0)>=floor)||seen.has(x.wallet))continue;seen.add(x.wallet);
-  const e=Math.max(0,expectedEdge(x.sharp,p.sport));
+  if(x.conditionId!==p.conditionId||!x.sharp||!(x.netShares>0)||!((x.currentValue||0)>=floor)||seen.has(x.wallet))continue;
+  const e=expectedEdge(x.sharp,p.sport);if(!(e>0))continue;seen.add(x.wallet);                  // only bettors listed in this sport count
   if(x.outcomeIndex===p.outcomeIndex){withE+=.5*e;withN++;}else{againstE+=e;againstN++;}
  }
+ const r=sportRecord(p.sharp,p.sport),proven=!!r?.proven&&!r.cold;
  const m=p.sizeMultiple,size=m>=1?1+.15*Math.min(Math.log2(m),3):.85,move=Math.max(0,priceMove(p)??0);
  const score=expectedEdge(p.sharp,p.sport)*size+withE-againstE-move;
- const tier=score>=.06&&(p.sharp.proven||withN>=1)?'High':score>=.03?'Solid':score>0?'Lean':'None';
+ const tier=!(score>0)?'None':proven&&m>=1&&score>=.02&&againstN===0?'High':proven||m>=2||withN>=1?'Solid':'Lean';
  return{score:+score.toFixed(4),estWin:Number.isFinite(p.curPrice)?+Math.max(.01,Math.min(.99,p.curPrice+score)).toFixed(3):null,tier,with:withN,against:againstN,
   alert:tier==='High'||(tier==='Solid'&&m>=2)};
 }
-// How a ranked bettor has done in this bet's sport: 'strong' (ahead of price), 'weak' (20+ bets and not ahead) or 'thin' (too few bets to say).
-export const sportFit=p=>{if(!p.sharp)return null;const r=p.sharp.bySport?.[p.sport];return !r?'thin':r.edge>0?'strong':'weak';};
+export const postable=p=>!p.sharp||p.trust?.tier==='High'||p.trust?.tier==='Solid';
+// Where a bet sits against the bettor's record: 'strong' (listed in this sport), 'cold' (listed, but clearly behind since) or 'outside'.
+export const sportFit=p=>{if(!p.sharp)return null;const r=sportRecord(p.sharp,p.sport);return !r?'outside':r.cold?'cold':'strong';};
 // How far the price has moved since the bettor bought (positive = more expensive now). null when either price is unknown.
 export const priceMove=p=>Number.isFinite(p.curPrice)&&Number.isFinite(p.avgPrice)&&p.avgPrice>0?p.curPrice-p.avgPrice:null;
-// A ranked bettor's bet is shown only if they are not behind in this sport and the price has not run away from their entry.
-export const showable=(p,settings)=>!p.sharp||(p.sportFit!=='weak'&&!(priceMove(p)>(settings.maxLate??.06)));
+// A ranked bettor's bet is shown only inside a sport they are listed in, and only while the price has not run away from their entry.
+export const showable=(p,settings)=>!p.sharp||(p.sportFit==='strong'&&!(priceMove(p)>(settings.maxLate??.06)));
 export const DEFAULTS={budget:100,minEdge:.02,minWin:0,buffer:.02,minSharps:2,maxOpposition:0,minGames:100,freshMinutes:120,maxSpread:.03,benchmarkMode:'polymarket',minCostShare:.04,minValue:1000,minRecentGames:20,maxChase:.02,minNetBuyUsd:500,minAdditionFraction:.05,requireUnopposed:true,maxLate:.06};
 export async function pool(items,n,fn){const result=new Array(items.length);let next=0;await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(next<items.length){const i=next++;result[i]=await fn(items[i],i);}}));return result;}
 export function validateOptions(options=[]){
@@ -51,7 +58,12 @@ export function compact(url,json,conditionIds){
  if(path==='/v2/positions')return {...json,data:json.data?.map(x=>pick(x,['token_id','condition_id','current_size','avg_price','entry_cost_usdc','total_cost_usdc','current_price','current_value','event_slug','outcome','outcome_index','end_date','first_entry_at','last_event_at','opposite_token_id','redeemable','title']))};
  if(path==='/events')return json.map(x=>({slug:x.slug,title:x.title,endDate:x.endDate,tags:x.tags?.map(t=>({slug:t.slug})),markets:x.markets?.filter(m=>m.gameStartTime&&(!conditionIds||conditionIds.has(m.conditionId))).map(m=>pick(m,['conditionId','gameStartTime']))}));
  if(path.startsWith('/clob-markets/'))return pick(json,['t','fd','mos','ao']);
- if(url===LEADERBOARD)return {generatedAt:json.generatedAt,policy:json.policy,sharps:(json.sharps||[]).slice(0,40).map(x=>({...pick(x,['rank','name','wallet','proven','games','wins','losses','winRate','avgPrice','edge','edgeLower','roi','medianStake']),bySport:Object.fromEntries(Object.entries(x.bySport||{}).map(([k,v])=>[k,pick(v,['games','wins','winRate','edge'])]))}))};
+ if(url===LEADERBOARD){
+  const sportKeys=['rank','games','wins','winRate','avgPrice','edge','adj','credit','proven','cold'],own=['name','wallet','games','wins','losses','winRate','avgPrice','edge','medianStake'];
+  const base={generatedAt:json.generatedAt,policy:json.policy};
+  if(Array.isArray(json.specialists))return {...base,specialists:json.specialists.slice(0,SHARP.maxWallets).map(x=>({...pick(x,own),sports:Object.fromEntries(Object.entries(x.sports||{}).map(([k,v])=>[k,{...pick(v,sportKeys),since:pick(v.since||{},['games','wins'])}]))}))};
+  return {...base,sharps:(json.sharps||[]).slice(0,40).map(x=>({...pick(x,[...own,'rank','proven']),bySport:Object.fromEntries(Object.entries(x.bySport||{}).map(([k,v])=>[k,pick(v,['games','wins','winRate','avgPrice','edge'])]))}))};
+ }
  return json;
 }
 export async function readPublic(url,conditionIds){
@@ -63,14 +75,21 @@ export async function readPublic(url,conditionIds){
  if(!Array.isArray(value)&&value&&typeof value==='object')value._fetchedAt=Date.now();
  return value;
 }
+// Older leaderboard files list bettors overall, without the per-sport, luck-adjusted figures. Until the daily job has written the
+// new format, give each of them a heavily discounted credit in the sports where they have 20+ bets and are ahead; never "proven".
+export function fromOverall(sharps){
+ return (sharps||[]).map(x=>({...x,sports:Object.fromEntries(Object.entries(x.bySport||{}).filter(([,v])=>v.games>=20&&v.edge>0).map(([k,v])=>[k,{rank:x.rank,games:v.games,wins:v.wins,winRate:v.winRate,avgPrice:v.avgPrice,edge:v.edge,
+  adj:v.edge*v.games/(v.games+800),credit:Math.min(.03,v.edge*v.games/(v.games+800)),proven:false,cold:false,since:{games:0,wins:0}}]))})).filter(x=>Object.keys(x.sports).length);
+}
+export const bestSport=s=>Object.entries(s?.sports||{}).sort((a,b)=>(b[1].proven===true)-(a[1].proven===true)||b[1].credit-a[1].credit)[0]||null;
 export async function roster(get,warnings){
- // Scan the best-ranked bettors from the daily leaderboard. If it is missing, stale or too short, fall back to the fixed roster
+ // Scan the sport specialists from the daily leaderboard. If it is missing, stale or too short, fall back to the fixed roster
  // (those wallets carry no record, so their cards are labelled as unranked).
  try{
   const lb=await get(LEADERBOARD),age=Date.now()-Date.parse(lb?.generatedAt);
-  const ok=x=>/^0x[0-9a-f]{40}$/.test(x?.wallet||'')&&x.medianStake>0&&Number.isFinite(x.edge)&&Number.isInteger(x.rank);
-  const sharps=(lb?.sharps||[]).filter(ok);
-  if(sharps.length>=SHARP.minListed&&age>=0&&age<SHARP.maxAgeDays*864e5)return sharps.map(x=>({name:String(x.name).slice(0,40),wallet:x.wallet,spec:`#${x.rank} · ${x.wins}-${x.losses} · ${x.edge>=0?'+':''}${(100*x.edge).toFixed(1)} pts vs price`,sharp:x}));
+  const ok=x=>/^0x[0-9a-f]{40}$/.test(x?.wallet||'')&&x.medianStake>0&&x.sports&&Object.values(x.sports).some(v=>Number.isFinite(v?.credit)&&Number.isInteger(v.rank));
+  const sharps=(Array.isArray(lb?.specialists)?lb.specialists:fromOverall(lb?.sharps)).filter(ok).slice(0,SHARP.maxWallets);
+  if(sharps.length>=SHARP.minListed&&age>=0&&age<SHARP.maxAgeDays*864e5)return sharps.map(x=>{const [sport,r]=bestSport(x);return{name:String(x.name).slice(0,40),wallet:x.wallet,spec:`${sport} #${r.rank} · ${r.wins}-${r.games-r.wins} · +${(100*r.credit).toFixed(1)} pts after luck${r.proven?' ✓':''}`,sharp:x};});
  }catch{}
  return CORE.map(t=>({...t}));
 }
@@ -95,9 +114,9 @@ export async function fetchWallet(t,get,asOf){
  const assets=new Set(positions.map(p=>p.asset));
  return {positions,activity:activity.filter(a=>assets.has(a.token_id)).map(a=>pick(a,['token_id','type','side','size','timestamp','price']))};
 }
-// Ranked bettors: any real bet counts (size feeds the trust score instead of gating). Unranked wallets keep the open-book share.
+// Ranked bettors: a bet at least their usual size counts (how much bigger feeds the trust score). Unranked wallets keep the open-book share.
 export const convinced=(p,settings)=>p.sharp?p.sizeMultiple>=(settings.minMultiple??SHARP.minMultiple):p.conv>=settings.minCostShare;
-// A ranked bettor's bet only has to be a real bet for them ($200 and at least half their usual size); unranked wallets keep the $1,000 floor.
+// A ranked bettor's bet has to be a real bet for them ($200 and at least their usual size); unranked wallets keep the $1,000 floor.
 export const bigEnough=(p,settings)=>p.currentValue>=(p.sharp?(settings.minSharpValue??SHARP.minValue):settings.minValue);
 export async function collect(get,traders,options,onWallet=async fn=>fn()){
  const warnings=[],asOf=options.asOf||Date.now(),activities={};let scannedWallets=0;

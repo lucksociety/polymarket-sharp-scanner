@@ -424,7 +424,7 @@ const CORE = [
 let TRADERS = [...CORE];
 const DATA = "https://data-api.polymarket.com";
 const GAMMA = "https://gamma-api.polymarket.com";
-const SPORTS = ["NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","LoL","Other sports","Non-sports"];
+const SPORTS = ["NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","College football","College basketball","LoL","CS2","Valorant","Dota 2","Other sports","Non-sports"];
 const MIN_BOOK = 25000;            // accounts smaller than this can't rank as Max/High open cost share
 const LIVE_WINDOW = 3.5*3600e3;   // a game counts as "live" for 3.5h after its start
 
@@ -453,16 +453,22 @@ async function pool(items, n, fn){
 }
 
 function classify(tags, slug){
-  const t = new Set(tags); const s = slug||"";
-  if (t.has("nfl") || s.startsWith("nfl-")) return "NFL";
-  if (t.has("nba") || s.startsWith("nba-")) return "NBA";
-  if (t.has("nhl") || s.startsWith("nhl-")) return "NHL";
-  if (t.has("mlb") || s.startsWith("mlb-")) return "MLB";
-  if (t.has("ufc") || t.has("mma") || s.startsWith("ufc-")) return "UFC";
-  if (t.has("league-of-legends") || t.has("lol") || s.startsWith("lol-")) return "LoL";
-  if (t.has("tennis") || s.startsWith("atp-") || s.startsWith("wta-")) return "Tennis";
-  if (t.has("soccer")) return "Soccer";
-  if (t.has("sports") || t.has("esports") || t.has("games")) return "Other sports";
+  const t = new Set(tags); const s = slug||""; const has = (...xs) => xs.some(x => t.has(x)); const pre = (...xs) => xs.some(x => s.startsWith(x));
+  // College and individual esports titles are checked first so they no longer share one "Other sports" bucket.
+  if (has("cfb","ncaaf","ncaa-football","college-football") || pre("cfb-","ncaaf-")) return "College football";
+  if (has("cbb","ncaab","ncaa-basketball","college-basketball","march-madness","cwbb") || pre("cbb-","ncaab-","cwbb-")) return "College basketball";
+  if (has("nfl") || pre("nfl-")) return "NFL";
+  if (has("nba") || pre("nba-")) return "NBA";
+  if (has("nhl") || pre("nhl-")) return "NHL";
+  if (has("mlb") || pre("mlb-")) return "MLB";
+  if (has("ufc","mma") || pre("ufc-")) return "UFC";
+  if (has("league-of-legends","lol") || pre("lol-")) return "LoL";
+  if (has("counter-strike","counter-strike-2","cs2","csgo") || pre("cs2-","csgo-")) return "CS2";
+  if (has("valorant") || pre("val-","valorant-")) return "Valorant";
+  if (has("dota-2","dota2","dota") || pre("dota2-","dota-")) return "Dota 2";
+  if (has("tennis") || pre("atp-","wta-")) return "Tennis";
+  if (has("soccer")) return "Soccer";
+  if (has("sports","esports","games")) return "Other sports";
   return "Non-sports";
 }
 function tierOf(c){ return c>=0.10?"max":c>=0.04?"high":c>=0.01?"med":"low"; }
@@ -811,6 +817,18 @@ render();
     table.innerHTML=`<thead><tr><th style="${th};text-align:left">#</th><th style="${th};text-align:left">Bettor</th><th style="${th}">Record</th><th style="${th}">Win rate</th><th style="${th}">Avg price</th><th style="${th}">Above price</th><th style="${th}">Return / bet</th><th style="${th}">Usual bet</th></tr></thead><tbody>`+
       rows.map(x=>`<tr><td style="${td};text-align:left">${x.rank}</td><td style="${td};text-align:left"><a href="https://polymarket.com/profile/${esc(x.wallet)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>${x.proven?' ✓':''}</td><td style="${td}">${x.wins}-${x.losses}</td><td style="${td}">${pct(x.winRate)}</td><td style="${td}">${(100*x.avgPrice).toFixed(0)}¢</td><td style="${td};color:var(--green-hi)">+${(100*x.edge).toFixed(1)} pts</td><td style="${td}">${x.roi>=0?'+':''}${pct(x.roi,1)}</td><td style="${td}">${money(x.medianStake)}</td></tr>`).join('')+'</tbody>';
     if(!rows.length)table.innerHTML='<tbody><tr><td>No bettor currently meets the listing rules.</td></tr></tbody>';
+    // Newer leaderboard files list bettors sport by sport, with each edge marked down for luck. Show that instead when present.
+    const spec=Array.isArray(lb.specialists)?lb.specialists:null;
+    if(spec){
+      const bySport={};for(const x of spec)for(const [sport,r] of Object.entries(x.sports||{}))(bySport[sport]||(bySport[sport]=[])).push({x,r});
+      const sports=Object.keys(bySport).sort((a,b)=>bySport[b].length-bySport[a].length||a.localeCompare(b)),proven=spec.reduce((n,x)=>n+Object.values(x.sports||{}).filter(r=>r.proven).length,0);
+      when.textContent=`${spec.length} bettors across ${sports.length} sports · ${proven} proven · updated ${new Date(lb.generatedAt).toLocaleString()} · ${lb.counts?.scored??'?'} wallets scored`;
+      document.getElementById('leaderNote').textContent='Each bettor is listed only in the sports where their own record is ahead of the price (last 180 days, pre-game bets, 30+ bets in that sport). Hundreds of records are checked, so the best ones are partly luck: "After luck" is the edge left once that is allowed for. ✓ = too good to be luck even so. "Since listing" counts only bets made after the bettor was first listed, which is the fair test. Past records do not guarantee future results.';
+      const pts=x=>Number.isFinite(x)?(x>=0?'+':'')+(100*x).toFixed(1)+' pts':'—';
+      table.innerHTML=`<thead><tr><th style="${th};text-align:left">#</th><th style="${th};text-align:left">Bettor</th><th style="${th}">Record in sport</th><th style="${th}">Win rate</th><th style="${th}">Avg price</th><th style="${th}">Above price</th><th style="${th}">After luck</th><th style="${th}">Since listing</th><th style="${th}">Usual bet</th></tr></thead><tbody>`+
+        sports.map(sport=>`<tr><td colspan="9" style="padding:12px 8px 4px;color:var(--gold-hi);text-align:left">${esc(sport)}</td></tr>`+bySport[sport].sort((a,b)=>a.r.rank-b.r.rank).map(({x,r})=>`<tr${r.cold?' style="opacity:.5"':''}><td style="${td};text-align:left">${r.rank}</td><td style="${td};text-align:left"><a href="https://polymarket.com/profile/${esc(x.wallet)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>${r.proven?' ✓':''}${r.cold?' · paused (losing since listing)':''}</td><td style="${td}">${r.wins}-${r.games-r.wins}</td><td style="${td}">${pct(r.winRate)}</td><td style="${td}">${(100*r.avgPrice).toFixed(0)}¢</td><td style="${td}">${pts(r.edge)}</td><td style="${td};color:var(--green-hi)">${pts(r.credit)}</td><td style="${td}">${r.since?.games?`${r.since.wins}-${r.since.games-r.since.wins}`:'—'}</td><td style="${td}">${money(x.medianStake)}</td></tr>`).join('')).join('')+'</tbody>';
+      if(!spec.length)table.innerHTML='<tbody><tr><td>No bettor currently meets the listing rules.</td></tr></tbody>';
+    }
   }catch(e){when.textContent='Leaderboard not available yet';table.innerHTML='';}
 })();
 </script>
@@ -827,7 +845,7 @@ render();
     const s=await r.json();
     if(s.empty||!s.overall||!(s.overall.bets+s.overall.pending>0)){when.textContent='No posted bets have finished yet';body.innerHTML='<div>Results appear here once posted bets settle. Updated daily.</div>';return;}
     when.innerHTML=`${line(s.overall)} · since ${new Date(s.since).toLocaleDateString()} · updated ${new Date(s.generatedAt).toLocaleDateString()}`;
-    body.innerHTML=block('By trust rating',s.byTrust)+block('By bettor tier',s.byTier)+block('By sport',s.bySport)+block('By bet size',s.bySize)+block('By price when posted',s.byPrice)+
+    body.innerHTML=(s.byRules&&Object.keys(s.byRules).length>1?block('By rules (changed 24 Nov)',s.byRules):'')+block('By trust rating',s.byTrust)+block('By bettor tier',s.byTier)+block('By sport',s.bySport)+block('By bet size',s.bySize)+block('By price when posted',s.byPrice)+(s.byBettor?block('By bettor',s.byBettor):'')+
       (s.recent?.length?`<div><div style="color:var(--gold-hi);margin-bottom:6px">Latest results</div>${s.recent.slice(0,8).map(x=>`<div style="padding:3px 0;border-bottom:1px solid var(--line)">${x.won?'✅':'❌'} ${esc(x.outcome)} (${Math.round(100*x.cost)}¢) · #${esc(x.rank)} ${esc(x.trader)}</div>`).join('')}</div>`:'');
   }catch(e){when.textContent='Scorecard not available yet';body.innerHTML='';}
 })();
