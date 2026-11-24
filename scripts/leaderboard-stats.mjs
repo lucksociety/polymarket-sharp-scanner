@@ -150,5 +150,5 @@ export function specialists(wallets, now, listed = {}, rules = SPORT_RULES) {
     out.set(p.w.wallet, row);
   }
   const rows = [...out.values()].filter((r) => r.medianStake > 0);
-  return { specialists: rows, listed: listedOut, prior: { mu: prior.mu, tau: Math.sqrt(prior.tau2), records: prior.records, tested: testable.length, proven: testable.filter((p) => p.proven).length } };
+  return { specialists: rows, listed: listedOut, pairs: testable, prior: { mu: prior.mu, tau: Math.sqrt(prior.tau2), records: prior.records, tested: testable.length, proven: testable.filter((p) => p.proven).length } };
 }

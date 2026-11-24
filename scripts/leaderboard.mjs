@@ -51,6 +51,25 @@ async function discover() {
       console.log(`discovery ${category}/${period}: ${lb.data.length} rows, ${added} new`);
     } catch (e) { warnings.push(`Leaderboard ${category}/${period} unavailable: ${e.message}`); }
   }
+  // PROBE: walk much deeper into Polymarket's leaderboards (every period, by profit and by volume) to widen the pool.
+  if (process.env.DISCOVER_WIDE) {
+    const per = +process.env.DISCOVER_DEPTH || 1000;
+    for (const category of ['sports', 'esports']) for (const period of ['all', 'month', 'week', 'day']) for (const sort of ['PNL', 'VOLUME']) {
+      let got = 0, added = 0, cursor = null, offset = 0, mode = null;
+      for (let page = 0; page < 40 && got < per; page++) {
+        const u = new URL(`${DATA}/v2/leaderboard?category=${category}&time_period=${period}&sort_by=${sort}&limit=100`);
+        if (mode === 'cursor') u.searchParams.set('cursor', cursor); else if (page) u.searchParams.set('offset', String(offset));
+        let lb; try { lb = await get(u.href, 2); } catch (e) { console.log(`wide ${category}/${period}/${sort} page ${page}: ${e.message}`); break; }
+        if (page === 0) console.log(`wide ${category}/${period}/${sort}: keys ${Object.keys(lb || {}).join(',')} pagination ${JSON.stringify(lb?.pagination || null)} first ${JSON.stringify(lb?.data?.[0] || null).slice(0, 300)}`);
+        if (!Array.isArray(lb?.data) || !lb.data.length) break;
+        let fresh = 0;
+        for (const row of lb.data) { const w = String(row.user_id || '').toLowerCase(); if (!/^0x[0-9a-f]{40}$/.test(w)) continue; got++; if (known.has(w)) continue; fresh++; added++;
+          known.set(w, { name: /^0x[0-9a-f]{20,}/i.test(row.user_name || '0x' + '0'.repeat(20)) ? w.slice(0, 6) + '…' + w.slice(-4) : String(row.user_name).slice(0, 40), wallet: w, source: `wide ${category} ${period} ${sort}` }); }
+        if (lb.pagination?.next_cursor) { mode = 'cursor'; cursor = lb.pagination.next_cursor; } else if (lb.pagination && Object.hasOwn(lb.pagination, 'next_cursor')) break; else { offset += lb.data.length; if (page > 0 && !fresh && mode === null) { /* offset may be ignored */ if (page > 1) break; } }
+      }
+      console.log(`wide ${category}/${period}/${sort}: ${got} rows, ${added} new, total ${known.size}`);
+    }
+  }
   return [...known.values()].slice(0, MAX_WALLETS);
 }
 
@@ -142,8 +161,11 @@ const out = { version: 2, policy: POLICY, generatedAt: new Date(now).toISOString
   warnings, specialists: spec.specialists.map(tidySpec), sharps: sharps.map(tidy), others: records.filter((r) => !sharps.includes(r)).sort((a, b) => (b.games >= RULES.minGames) - (a.games >= RULES.minGames) || b.edgeLower - a.edgeLower).map(tidy) };
 if (records.length < wallets.length * 0.8 || !payouts.size) { console.error('Too much data missing; leaderboard not written.', JSON.stringify(out.counts), warnings.slice(0, 5)); process.exit(1); }
 fs.mkdirSync('data', { recursive: true });
-fs.writeFileSync('data/leaderboard.json', JSON.stringify(out, null, 1));
-fs.writeFileSync(LISTED, JSON.stringify(Object.fromEntries(Object.entries(spec.listed).sort()), null, 1));
+if (!process.env.PROBE) fs.writeFileSync('data/leaderboard.json', JSON.stringify(out, null, 1));
+if (!process.env.PROBE) fs.writeFileSync(LISTED, JSON.stringify(Object.fromEntries(Object.entries(spec.listed).sort()), null, 1));
+if (process.env.PROBE) fs.writeFileSync('data/probe.json', JSON.stringify({ generatedAt: out.generatedAt, counts: out.counts, luck: out.luck, warnings, sources: Object.entries(records.reduce((m, r) => { m[r.source] = (m[r.source] || 0) + 1; return m; }, {})),
+  pairs: spec.pairs.map((p) => ({ name: p.w.name, wallet: p.w.wallet, source: records.find((r) => r.wallet === p.w.wallet)?.source, sport: p.sport, games: p.r.games, wins: p.r.wins, avgPrice: round(p.r.avgPrice), edge: round(p.r.edge), se: round(p.r.se), z: round(p.r.edge / p.r.se, 2), roi: round(p.r.roi),
+    older: round(p.r.olderEdge), newer: round(p.r.newerEdge), spanDays: round(p.r.spanDays, 0), lastGameAt: p.r.lastGameAt, lastBuyAt: p.w.lastBuyAt, adj: round(p.adj), credit: round(p.credit), proven: p.proven === true, listable: !!p.listable, medianStake: round(p.w.medianStake, 0), truncated: !!records.find((r) => r.wallet === p.w.wallet)?.truncated })) }));
 const pct = (x) => (x == null ? '—' : (100 * x).toFixed(1));
 console.log(`\n${out.counts.qualified} of ${records.length} scored wallets qualify. Top ${sharps.length}:`);
 for (const r of out.sharps) console.log(`#${String(r.rank).padStart(2)} ${r.name.padEnd(28)} ${String(r.wins).padStart(3)}-${String(r.losses).padEnd(3)} win ${pct(r.winRate)}% at avg ${pct(r.avgPrice)}¢ | edge +${pct(r.edge)} (low ${pct(r.edgeLower)}) | roi ${pct(r.roi)}% | halves ${pct(r.olderEdge)}/${pct(r.newerEdge)} | median bet $${Math.round(r.medianStake)} | ${r.proven ? 'PROVEN' : 'leading'} | ${r.source}${r.truncated ? ' | truncated' : ''}`);
