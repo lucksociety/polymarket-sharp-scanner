@@ -28,7 +28,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/leaderboard.json
+          git add data/leaderboard.json data/listed.json
           git diff --cached --quiet || git commit -m "leaderboard: daily refresh $(date -u +%Y-%m-%dT%H:%MZ)"
           git pull --rebase --autostash origin main
           git push

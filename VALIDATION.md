@@ -36,3 +36,11 @@ Limitations: no independent sportsbook feed is bundled; default probability esti
 - `/polysharp` now defaults to the dashboard’s highest-conviction upcoming cards, with a shared `SharpEngine.topConviction` selector, $25,000 minimum open book, positive net exposure, one card per bettor/market and the same $1,000 / 4% display floors. Historical edge qualification no longer hides default conviction cards. Explicit `min_edge` or `min_win` arguments retain the optional stricter edge path.
 - 60 automated tests pass, including ranking/deduplication, small-book and hedge exclusion, no-history conviction output, explicit edge opt-in, partial-scan labels and mention suppression. Cards identify concentration and indicative prices without labeling either as verified edge or win probability.
 - Live default-command verification completed in Luck Society #general: 44/44 wallets, 5,035 loaded positions and three conviction cards, ranked at 93.8%, 27.6% and 27.5% open-cost share. Discord displayed all three cards with the bettor, amounts, indicative price, support/opposition and start time. No historical edge gate suppressed the result.
+
+## Sport specialists and luck adjustment (24 Nov 2026)
+
+- `cd cloudflare && npm test`: 78 tests pass. `node --test scripts/*.test.mjs engine.test.js`: 37 pass.
+- `scripts/leaderboard.mjs` was run end to end against a synthetic stand-in for the Polymarket API (215 wallets, about 28,000 games). It wrote `specialists`, the luck figures and `data/listed.json`, and no per-bet data leaked into the output. It has **not** been run against the live API from the change environment, which cannot reach Polymarket.
+- The dashboard leaderboard and scorecard panels were executed against both the new and the old leaderboard format.
+- The sport split relies on Polymarket tag and slug names for college football, college basketball, CS2, Valorant and Dota 2 that were not confirmed against live events. An unrecognised event still falls back to "Other sports", as before.
+- `data/listed.json` was seeded from the eight leaderboards committed 16 to 23 Nov: a bettor's listing date in a sport is the first day they appeared on the overall list while ahead in that sport over 20+ bets.

@@ -1,11 +1,11 @@
 // Private, append-only paper observations. Never persist interaction tokens or webhooks.
-export const POLICY='sharp-trust-v1';
+export const POLICY='sharp-sport-v2';
 export const PREFIX='signals/v1/';
 const copy=(x,keys)=>Object.fromEntries(keys.filter(k=>x?.[k]!==undefined).map(k=>[k,x[k]]));
 export const gameKey=p=>(p.eventSlug||p.conditionId||p.asset).replace(/-more-markets$/,'');
-export function selectWatchlist(rows,{now=Date.now(),limit=10}={}){
+export function selectWatchlist(rows,{now=Date.now(),limit=10,keep=()=>true}={}){
  // Ranked bettors: most trusted bet first (see trust() in scanner.mjs). Unranked wallets keep the open-book share and its $25K floor.
- const sorted=rows.filter(p=>p.isGame&&p.game>now&&p.netShares>0&&p.costKnown!==false&&(p.sharp||p.costBook>=25000)).sort((a,b)=>(b.trust?.score??-1)-(a.trust?.score??-1)||(b.sizeMultiple??-1)-(a.sizeMultiple??-1)||b.conv-a.conv);
+ const sorted=rows.filter(p=>p.isGame&&p.game>now&&p.netShares>0&&p.costKnown!==false&&(p.sharp||p.costBook>=25000)&&keep(p)).sort((a,b)=>(b.trust?.score??-1)-(a.trust?.score??-1)||(b.sizeMultiple??-1)-(a.sizeMultiple??-1)||b.conv-a.conv);
  const seen=new Set();return sorted.filter(p=>{const k=gameKey(p);if(seen.has(k))return false;seen.add(k);return true}).slice(0,limit);
 }
 export const journalKey=(runId,at)=>PREFIX+new Date(at).toISOString().slice(0,10)+'/'+runId;

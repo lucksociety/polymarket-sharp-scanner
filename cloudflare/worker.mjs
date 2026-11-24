@@ -3,7 +3,7 @@ import E from '../engine.js';
 import {scanReport} from './scan-report.mjs';
 import {selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey} from './journal.mjs';
 import {handle,report,convictionReport,predictionsReport,editReply} from './discord.mjs';
-import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage} from './scanner.mjs';
+import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage,postable} from './scanner.mjs';
 
 import {predictionsRoster,fetchPredictionsWallet,rankPredictions} from './predictions.mjs';
 import {LATEST,RESULTS,LEDGER,ledgerKey,alertKey,ledgerEntries,appendLedger,firstPerGame,summarize,scorecardPayload} from './scorecard.mjs';
@@ -145,7 +145,9 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    }
    const scan=await collect(get,traders,{...job.options,asOf:job.receivedAt},(_fn,t)=>{if(!walletData.has(t.wallet))throw Error('Wallet unavailable after retry');return walletData.get(t.wallet);});
    if(warnings.length)scan.complete=false;warnings.push(...scan.warnings);
-   let watchlist=selectWatchlist(scan.candidates,{now:Date.now(),limit:job.options.limit});
+   // Only High and Solid cards are posted. Lean ones are counted so the reply can say how many were held back.
+   let watchlist=selectWatchlist(scan.candidates,{now:Date.now(),limit:job.options.limit,keep:postable});
+   const heldBack=Math.max(0,selectWatchlist(scan.candidates,{now:Date.now(),limit:100}).length-selectWatchlist(scan.candidates,{now:Date.now(),limit:100,keep:postable}).length);
    if(job.source==='alert'){
     // Alerts post only high-trust (or solid and unusually large) cards that have not been alerted before and were traded recently.
     const recent=p=>{const t=typeof p.lastEvent==='number'?(p.lastEvent<1e12?p.lastEvent*1000:p.lastEvent):Date.parse(p.lastEvent);return !Number.isFinite(t)||job.receivedAt-t<6*3600000;};
@@ -181,7 +183,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
    const freshAssessments=[];
    await pool(candidates,3,async p=>{if(!refreshIds.has(p.asset))return;try{const q=await result(step,this.env,refreshIds.get(p.asset),deadline);quoteCache.set(p.asset,q);const a=await step.do('refresh-assess-'+p.wallet+'-'+p.asset.slice(-30),()=>({...assessOne(p,scan,evidence,job.options,q),quoteAt:q.quoteAt}));freshAssessments.push(a);}catch{quoteCache.delete(p.asset);freshAssessments.push({p,eligible:false,reasons:['Executable quote unavailable']});}});
    const bets=rankUnique(freshAssessments).filter(a=>Date.now()-a.quoteAt<=30000&&a.p.game>Date.now()).slice(0,job.options.limit);
-   return await finishScan({step,env:this.env,job,runId:event.instanceId,scan,traders,watchlist,bets,assessments:[...new Map([...assessments,...freshAssessments].map(a=>[a.p.wallet+'|'+a.p.asset,a])).values()],quotes:quoteCache,evidenceManifest:manifest,historyCount:evidence.history.length,historyPending,warnings});
+   return await finishScan({step,env:this.env,job,runId:event.instanceId,scan,traders,watchlist,heldBack,bets,assessments:[...new Map([...assessments,...freshAssessments].map(a=>[a.p.wallet+'|'+a.p.asset,a])).values()],quotes:quoteCache,evidenceManifest:manifest,historyCount:evidence.history.length,historyPending,warnings});
   }catch{
    if(job.source==='verification')return{published:0,incomplete:true,verification:true};
    if(job.source==='alert')return{mode:'alert',published:0,incomplete:true};
@@ -191,10 +193,10 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
  }
 }
 
-async function finishScan({step,env,job,runId,scan,traders,watchlist,bets,assessments,quotes,evidenceManifest,historyCount,historyPending,warnings}){
+async function finishScan({step,env,job,runId,scan,traders,watchlist,heldBack=0,bets,assessments,quotes,evidenceManifest,historyCount,historyPending,warnings}){
  const snapshotAt=await step.do('paper-snapshot-time',()=>Date.now());
  let scorecard=null;try{scorecard=await step.do('read-scorecard',()=>env.CACHE.get(LATEST,'json'));}catch{}
- const rendered=scanReport({scorecard,alert:job.source==='alert',bets:bets.filter(a=>a.p.game>snapshotAt),watchlist:watchlist.filter(p=>p.game>snapshotAt),scan,rosterCount:traders.length,ranked:traders.some(t=>t.sharp),historyCount,historyPending,options:job.options,assessments,quotes,now:snapshotAt});
+ const rendered=scanReport({scorecard,heldBack,alert:job.source==='alert',bets:bets.filter(a=>a.p.game>snapshotAt),watchlist:watchlist.filter(p=>p.game>snapshotAt),scan,rosterCount:traders.length,ranked:traders.some(t=>t.sharp),historyCount,historyPending,options:job.options,assessments,quotes,now:snapshotAt});
  const key=journalKey(runId,job.receivedAt),record=freezeRun({runId,job:{...job,rosterCount:traders.length},scan,watchlist:rendered.watchlist,candidates:rendered.candidates,assessments,quotes,evidenceManifest,payload:rendered.payload,now:snapshotAt});
  const prepared=await step.do('freeze-paper-signal',opts,async()=>{if(new TextEncoder().encode(JSON.stringify(record)).length>850000)throw Error('Frozen signal exceeds safe storage size');const saved=await putPrepared(env.CACHE,key,record);return{payload:saved.payload,preparedAt:saved.preparedAt,entries:saved.entries.map(e=>({kind:e.kind,asset:e.position.asset,conditionId:e.position.conditionId,game:e.position.game,quoteAt:e.quote?.quoteAt}))};});
  const settled=new Map(),closes=new Map();

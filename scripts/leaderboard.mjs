@@ -1,8 +1,8 @@
 // Builds data/leaderboard.json: every tracked or discovered wallet scored on its last 180 days of
 // pre-game sports bets. Public Polymarket endpoints only; no keys. Run in GitHub Actions.
 import fs from 'node:fs';
-import { CORE, classify } from '../cloudflare/roster.mjs';
-import { walletRecord, rank, RULES, POLICY } from './leaderboard-stats.mjs';
+import { CORE, UNCOPYABLE, classify } from '../cloudflare/roster.mjs';
+import { walletRecord, rank, specialists, RULES, SPORT_RULES, POLICY } from './leaderboard-stats.mjs';
 
 const DATA = 'https://data-api.polymarket.com', GAMMA = 'https://gamma-api.polymarket.com';
 const WINDOW_DAYS = 180, MAX_PAGES = +process.env.MAX_PAGES || 40, MAX_WALLETS = +process.env.MAX_WALLETS || 400;
@@ -51,7 +51,7 @@ async function discover() {
       console.log(`discovery ${category}/${period}: ${lb.data.length} rows, ${added} new`);
     } catch (e) { warnings.push(`Leaderboard ${category}/${period} unavailable: ${e.message}`); }
   }
-  return [...known.values()].slice(0, MAX_WALLETS);
+  return [...known.values()].filter((t) => !UNCOPYABLE.has(t.wallet)).slice(0, MAX_WALLETS);
 }
 
 const wallets = await discover();
@@ -92,7 +92,7 @@ for (const w of perWallet) {
     if (!ev || ev.sport === 'Non-sports' || !Number.isFinite(game)) continue;
     const buys = p.buys.filter((b) => b.t < game).sort((a, b) => a.t - b.t);
     if (!buys.length) continue;
-    w.pregame.push({ ...p, buys: undefined, game, sport: ev.sport, eventId: (p.slug || p.condition).replace(/-more-markets$/, ''), price: buys[0].price, stake: buys.reduce((s, b) => s + b.price * b.size, 0), lastBuy: buys.at(-1).t });
+    w.pregame.push({ ...p, buys: undefined, game, sport: ev.sport, eventId: (p.slug || p.condition).replace(/-more-markets$/, ''), price: buys[0].price, firstBuy: buys[0].t, stake: buys.reduce((s, b) => s + b.price * b.size, 0), lastBuy: buys.at(-1).t });
   }
 }
 
@@ -112,28 +112,42 @@ const records = perWallet.filter((w) => !w.failed).map((w) => {
   for (const p of w.pregame) {
     const pay = payouts.get(p.condition)?.[p.outcomeIndex];
     if (pay !== 0 && pay !== 1000000) continue;                       // unsettled, void or split: not a win or a loss
-    const b = { price: p.price, payout: pay / 1e6, stake: p.stake, gameAt: p.game, sport: p.sport }, prev = byGame.get(p.eventId);
+    const b = { price: p.price, payout: pay / 1e6, stake: p.stake, gameAt: p.game, boughtAt: p.firstBuy, sport: p.sport }, prev = byGame.get(p.eventId);
     if (!prev || prev.stake < b.stake) byGame.set(p.eventId, b);       // the wallet's main bet in that game
   }
   const rec = walletRecord({ bets: [...byGame.values()], stakes: w.pregame.map((p) => p.stake).filter((x) => x >= 10), lastBuyAt: w.pregame.length ? Math.max(...w.pregame.map((p) => p.lastBuy)) : null }, now);
-  return { name: w.name, wallet: w.wallet, source: w.source, truncated: w.truncated, tradeRows: w.tradeRows, ...rec };
+  return { name: w.name, wallet: w.wallet, source: w.source, truncated: w.truncated, tradeRows: w.tradeRows, bets: [...byGame.values()], ...rec };
 });
 const sharps = rank(records);
+// Sport specialists: each bettor judged sport by sport, with every edge marked down for luck. `data/listed.json` remembers when a
+// bettor was first listed in a sport so the record since then (the only part not used to pick them) can be reported.
+const LISTED = 'data/listed.json';
+let listedBefore = {}; try { const j = JSON.parse(fs.readFileSync(LISTED, 'utf8')); if (j && typeof j === 'object' && !Array.isArray(j)) listedBefore = j; } catch {}
+const spec = specialists(records.map((r) => ({ name: r.name, wallet: r.wallet, bets: r.bets, overall: r, medianStake: r.medianStake, lastBuyAt: r.lastBuyAt })), now, listedBefore);
 const round = (x, d = 4) => (Number.isFinite(x) ? +x.toFixed(d) : null);
+const tidySport = (x) => ({ rank: x.rank, games: x.games, wins: x.wins, winRate: round(x.winRate), avgPrice: round(x.avgPrice), edge: round(x.edge), roi: round(x.roi), adj: round(x.adj), credit: round(x.credit),
+  proven: x.proven, cold: x.cold, since: { listedAt: x.since.listedAt, games: x.since.games, wins: x.since.wins, edge: round(x.since.edge), roi: round(x.since.roi) } });
+const tidySpec = (r) => ({ name: r.name, wallet: r.wallet, medianStake: round(r.medianStake, 2), games: r.games, wins: r.wins ?? 0, losses: r.losses ?? 0, winRate: round(r.winRate), avgPrice: round(r.avgPrice), edge: round(r.edge),
+  sports: Object.fromEntries(Object.entries(r.sports).sort((a, b) => a[1].rank - b[1].rank).map(([k, x]) => [k, tidySport(x)])) });
 const tidy = (r) => ({ rank: r.rank ?? null, name: r.name, wallet: r.wallet, source: r.source, qualified: r.qualified, proven: !!r.proven, reasons: r.reasons,
   games: r.games, wins: r.wins ?? 0, losses: r.losses ?? 0, winRate: round(r.winRate), avgPrice: round(r.avgPrice), edge: round(r.edge), edgeLower: round(r.edgeLower),
   roi: round(r.roi), heldPnl: round(r.heldPnl, 0), olderEdge: round(r.olderEdge), newerEdge: round(r.newerEdge), spanDays: round(r.spanDays, 0),
   medianStake: round(r.medianStake, 2), typicalBets: r.typicalBets, lastBuyAt: r.lastBuyAt, truncated: !!r.truncated,
   bySport: Object.fromEntries(Object.entries(r.bySport || {}).map(([k, s]) => [k, { games: s.games, wins: s.wins, winRate: round(s.winRate), avgPrice: round(s.avgPrice), edge: round(s.edge), roi: round(s.roi) }])) });
-const out = { version: 1, policy: POLICY, generatedAt: new Date(now).toISOString(), windowDays: WINDOW_DAYS, rules: RULES,
+const out = { version: 2, policy: POLICY, generatedAt: new Date(now).toISOString(), windowDays: WINDOW_DAYS, rules: RULES,
   method: 'One bet per game: the wallet\'s largest pre-game position, bought on one side only, held to the result. Edge = win rate minus the all-in price paid (assumed fee 0.05·p·(1−p)). Ranked by the conservative (one-sided 95%) edge. To be listed a wallet needs 50+ settled bets over 30+ days, a bet in the last 21 days, a win rate at least 2 points above price with a positive flat-stake return, and to be ahead in both the older and newer half of its record. "Proven" means the conservative edge is still above zero. Retrospective; not proof of future profit.',
   counts: { wallets: wallets.length, scored: records.length, qualified: records.filter((r) => r.qualified).length, proven: records.filter((r) => r.proven).length, ...counts, events: events.size, settledMarkets: payouts.size },
-  warnings, sharps: sharps.map(tidy), others: records.filter((r) => !sharps.includes(r)).sort((a, b) => (b.games >= RULES.minGames) - (a.games >= RULES.minGames) || b.edgeLower - a.edgeLower).map(tidy) };
+  sportRules: SPORT_RULES, luck: { averageEdge: round(spec.prior.mu), skillSpread: round(spec.prior.tau), records: spec.prior.records, tested: spec.prior.tested, proven: spec.prior.proven },
+  sportMethod: 'Sport specialists: each bettor is scored separately in each sport (30+ settled bets there, active, ahead of the price overall and in the newer half). Hundreds of records are screened, so each edge is marked down for luck: "adj" pulls it towards the average of all records, more strongly on fewer bets, and "proven" is decided across all records together so that only about one in five proven records should be a fluke. "since" is the record on bets placed after the bettor was first listed in that sport.',
+  warnings, specialists: spec.specialists.map(tidySpec), sharps: sharps.map(tidy), others: records.filter((r) => !sharps.includes(r)).sort((a, b) => (b.games >= RULES.minGames) - (a.games >= RULES.minGames) || b.edgeLower - a.edgeLower).map(tidy) };
 if (records.length < wallets.length * 0.8 || !payouts.size) { console.error('Too much data missing; leaderboard not written.', JSON.stringify(out.counts), warnings.slice(0, 5)); process.exit(1); }
 fs.mkdirSync('data', { recursive: true });
 fs.writeFileSync('data/leaderboard.json', JSON.stringify(out, null, 1));
+fs.writeFileSync(LISTED, JSON.stringify(Object.fromEntries(Object.entries(spec.listed).sort()), null, 1));
 const pct = (x) => (x == null ? '—' : (100 * x).toFixed(1));
 console.log(`\n${out.counts.qualified} of ${records.length} scored wallets qualify. Top ${sharps.length}:`);
 for (const r of out.sharps) console.log(`#${String(r.rank).padStart(2)} ${r.name.padEnd(28)} ${String(r.wins).padStart(3)}-${String(r.losses).padEnd(3)} win ${pct(r.winRate)}% at avg ${pct(r.avgPrice)}¢ | edge +${pct(r.edge)} (low ${pct(r.edgeLower)}) | roi ${pct(r.roi)}% | halves ${pct(r.olderEdge)}/${pct(r.newerEdge)} | median bet $${Math.round(r.medianStake)} | ${r.proven ? 'PROVEN' : 'leading'} | ${r.source}${r.truncated ? ' | truncated' : ''}`);
 console.log('\nBest of the rest:'); for (const r of out.others.slice(0, 15)) console.log(`   ${r.name.padEnd(28)} ${r.wins}-${r.losses} win ${pct(r.winRate)}% at ${pct(r.avgPrice)}¢ edge ${pct(r.edge)} (low ${pct(r.edgeLower)}) :: ${r.reasons.join('; ')}`);
 console.log(JSON.stringify(out.counts), warnings.slice(0, 10));
+console.log(`\nLuck model: average edge ${pct(spec.prior.mu)} pts, spread of real skill ${pct(spec.prior.tau)} pts across ${spec.prior.records} sport records; ${spec.prior.proven} of ${spec.prior.tested} proven. ${out.specialists.length} specialists:`);
+for (const r of out.specialists) console.log(`   ${r.name.padEnd(28)} ` + Object.entries(r.sports).map(([k, x]) => `${k} #${x.rank} ${x.wins}-${x.games - x.wins} raw +${pct(x.edge)} credited +${pct(x.credit)}${x.proven ? ' PROVEN' : ''}${x.cold ? ' COLD' : ''}${x.since.games ? ` since ${x.since.wins}-${x.since.games - x.since.wins}` : ''}`).join(' | '));

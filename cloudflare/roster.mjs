@@ -76,18 +76,68 @@ export const CORE = [
   {"name":"0x6918…782b","wallet":"0x6918ea182d963b1fb7888860b8a8b8bcfba5782b","spec":"Esports · lifetime realized +$122K · pregame sample 59% wins"},
   {"name":"1am1b","wallet":"0xe1f313a980c5cfd4444f66bcf40563eb900e5402","spec":"Esports · lifetime realized +$101K · pregame sample 57% wins"},
   {"name":"lonmi2511","wallet":"0x997cb45c25e94b4ee58c234ce1f211496a0d51f3","spec":"Esports · lifetime realized +$56K · pregame sample 65% wins"},
+  // Found by the 24 Nov 2026 wide search (7,042 leaderboard wallets): ahead of the luck check on bets placed 2+ hours before the game,
+  // and still ahead when each bet is re-priced at the market price 30 minutes after they bought.
+  {"name": "BoomLaLa", "wallet": "0xe40172522c7c64afa2d052ddae6c92cd0f417b88", "spec": "NHL: 37-11 on early bets, still +23 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "jrzn", "wallet": "0xa7a575b7bddb37c2a82c6a8d1cee1e8049c438d8", "spec": "Soccer: 46-6 on early bets, still +18 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "shineforever", "wallet": "0x4e59cee7a51cb9d1be92dffb5119f9af508ae56a", "spec": "Soccer: 39-6 on early bets, still +19 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "0xe16d…5e30", "wallet": "0xe16d3f2a5807999b358affd9445c3a09e45e5e30", "spec": "Dota 2: 55-17 on early bets, still +17 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "mustbethewater", "wallet": "0xc5187cb669690150643ba2f9aac6b7d98d212594", "spec": "Soccer: 109-13 on early bets, still +10 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "mpyh", "wallet": "0x695d8d90deae05ea1e07d3804130ff9564fd0d7c", "spec": "LoL: 37-11 on early bets, still +18 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "Sav17", "wallet": "0xbaf942ef13c9c7775a8782a4947b3dc318903a59", "spec": "Tennis: 24-6 on early bets, still +26 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "AvocadosFromMexico", "wallet": "0x033f0346c007323030eb420305ffede19a95618e", "spec": "NFL: 41-17 on early bets, still +16 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "qZ83rxV0x7Kqj9T", "wallet": "0xf64745161e46cbd2143f021edd92cf6bed850ccb", "spec": "Soccer: 107-35 on early bets, still +10 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "10scat", "wallet": "0xc1d971eadb83e32358b828cef7a6f722770c5333", "spec": "LoL: 36-6 on early bets, still +19 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "l0wkirkenuinely", "wallet": "0x4cb03276679d644ec1852f744668f345d41657e0", "spec": "LoL: 50-20 on early bets, still +16 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "Onedayonedollar", "wallet": "0x3957fb024ae4314fafd2fae943965fdebeda35f0", "spec": "Tennis: 60-10 on early bets, still +13 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "clb-q", "wallet": "0x801eb99ed523fa997a93ea07cc5ff3f03a1071b4", "spec": "Tennis: 60-14 on early bets, still +13 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "timberox", "wallet": "0xea68c7e8079639c37ebefda7f934a71b32b9be2c", "spec": "CS2: 27-14 on early bets, still +20 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "txwd9991", "wallet": "0x61e89ebf0dce17d7ed7c9eb013f4fe1eed0cb283", "spec": "NBA: 49-26 on early bets, still +15 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "thatsabing0", "wallet": "0xaa3ccfe85303804f4471baebdbb19a8e1c0c5607", "spec": "Tennis: 81-28 on early bets, still +11 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "lifeonrock", "wallet": "0x00d15d705e582506a56f23f572d0e1409dfaae39", "spec": "Soccer: 45-25 on early bets, still +15 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "btna", "wallet": "0x3835957ad7188313391213e8647baaf4a2ed3493", "spec": "Soccer: 26-8 on early bets, still +16 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "0x63a2…03b5", "wallet": "0x63a24d5a878ea379f9db0a536ae9d18a0efc03b5", "spec": "College football: 76-42 on early bets, still +12 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "lbtrading", "wallet": "0xa6db8383b756f1e58c504ff4179e19427dd73155", "spec": "NBA: 44-17 on early bets, still +15 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": ".zzzz", "wallet": "0x176976d23e6fec51ab94317ed435020f88c694ef", "spec": "LoL: 22-9 on early bets, still +20 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "0x4c23…e1d5", "wallet": "0x4c237d314db9eb27f973a357e9710ca78efbe1d5", "spec": "Soccer: 47-38 on early bets, still +13 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "Jemima8", "wallet": "0x3804d59c591bf8118b5aeb270fdb241628e96d61", "spec": "LoL: 27-22 on early bets, still +15 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "n1ck10s", "wallet": "0x0d0efde748a217f3985ef32ecc7d005f83e50570", "spec": "Tennis: 66-37 on early bets, still +11 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "nigiri99", "wallet": "0xdc41c39b95453c943174f369926018f6963bdd7e", "spec": "NBA: 47-22 on early bets, still +14 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "jole24", "wallet": "0xbfdfe31978b9ba79056b884ccf3bbc9225718e02", "spec": "MLB: 22-9 on early bets, still +20 pts at the price 30 min later (24 Nov wide search)"},
+  {"name": "eniht", "wallet": "0xaab8197e8ece76ea4364ffe6f7872adef2b24664", "spec": "CS2: 29-7 on early bets, still +16 pts at the price 30 min later (24 Nov wide search)"},
 ];
 export function classify(tags, slug){
-  const t = new Set(tags); const s = slug||"";
-  if (t.has("nfl") || s.startsWith("nfl-")) return "NFL";
-  if (t.has("nba") || s.startsWith("nba-")) return "NBA";
-  if (t.has("nhl") || s.startsWith("nhl-")) return "NHL";
-  if (t.has("mlb") || s.startsWith("mlb-")) return "MLB";
-  if (t.has("ufc") || t.has("mma") || s.startsWith("ufc-")) return "UFC";
-  if (t.has("league-of-legends") || t.has("lol") || s.startsWith("lol-")) return "LoL";
-  if (t.has("tennis") || s.startsWith("atp-") || s.startsWith("wta-")) return "Tennis";
-  if (t.has("soccer")) return "Soccer";
-  if (t.has("sports") || t.has("esports") || t.has("games")) return "Other sports";
+  const t = new Set(tags); const s = slug||""; const has = (...xs) => xs.some(x => t.has(x)); const pre = (...xs) => xs.some(x => s.startsWith(x));
+  // College and individual esports titles are checked first so they no longer share one "Other sports" bucket.
+  if (has("cfb","ncaaf","ncaa-football","college-football") || pre("cfb-","ncaaf-")) return "College football";
+  if (has("cbb","ncaab","ncaa-basketball","college-basketball","march-madness","cwbb") || pre("cbb-","ncaab-","cwbb-")) return "College basketball";
+  if (has("nfl") || pre("nfl-")) return "NFL";
+  if (has("nba") || pre("nba-")) return "NBA";
+  if (has("nhl") || pre("nhl-")) return "NHL";
+  if (has("mlb") || pre("mlb-")) return "MLB";
+  if (has("ufc","mma") || pre("ufc-")) return "UFC";
+  if (has("league-of-legends","lol") || pre("lol-")) return "LoL";
+  if (has("counter-strike","counter-strike-2","cs2","csgo") || pre("cs2-","csgo-")) return "CS2";
+  if (has("valorant") || pre("val-","valorant-")) return "Valorant";
+  if (has("dota-2","dota2","dota") || pre("dota2-","dota-")) return "Dota 2";
+  if (has("tennis") || pre("atp-","wta-")) return "Tennis";
+  if (has("soccer")) return "Soccer";
+  if (has("sports","esports","games")) return "Other sports";
   return "Non-sports";
 }
-export const SPORTS=["All","NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","LoL","Other sports"];
+export const SPORTS=["All","NFL","NBA","NHL","MLB","UFC","Soccer","Tennis","College football","College basketball","LoL","CS2","Valorant","Dota 2","Other sports"];
+
+// Bettors whose record cannot be copied: when their bets are re-priced at the market price 30 minutes after they bought, the edge is
+// gone (they are filled at stale prices in thin markets). Found by the 24 Nov 2026 copy-price check. Never listed, whatever their record.
+export const UNCOPYABLE = new Set([
+  "0x465ace6ef4d7e4c09bdb0fad52ef7016286ec619", // 0x465a…c619
+  "0x1d6819679e37b51fc1d01ac7691cb4f408dd4354", // Aleks100
+  "0x6401f2b177063ae608457ec82773758e8ee9f240", // atqsvj
+  "0x12e321c11e950ce18a226f453750bb8964b67982", // canupdatelateron
+  "0xc2f2d01b227948e59f25aeb3d49564b8975d0ff7", // claudesports
+  "0x4b3e2546b0cd99f7583340a16768a58b465acfae", // helic0pter
+  "0xc0f89d4e30b3ab40ab1f1979ebdcf8a02c39ae2e", // lukibazdonauki754
+  "0xe8ca3f758c93f44f3ec210542ab78afb7c0bcccb", // Parkan312
+  "0x03dc4df097cbd8bd17744174b8a3c01509ee99e1", // roscoff
+  "0xf5fe759cece500f58a431ef8dacea321f6e3e23d", // Stavenson
+]);

@@ -114,15 +114,26 @@ The existing visual style, roster editing in `index.html` and GitHub Pages deplo
 
 The record is retrospective and picked from a few hundred wallets, so some listed bettors will have been lucky. The forward paper log is the test.
 
+### Sport specialists (24 Nov 2026)
+
+The same job also judges every bettor sport by sport and writes `specialists` to `data/leaderboard.json`. This is what `/polysharp` scans; the overall list above is kept for reference.
+
+- **Sports:** college football, college basketball, CS2, Valorant and Dota 2 are separate sports, no longer part of "Other sports" (`classify()` in `cloudflare/roster.mjs`).
+- **Listed in a sport:** 30+ settled bets there over 30+ days, active (a bet in the last 21 days and a settled game in that sport in the last 45), ahead of the price overall and in the newer half. Up to 12 per sport and 60 wallets in all.
+- **Marked down for luck:** hundreds of records are screened, so the best are partly the luckiest. `adj` pulls each edge towards the average of all records, more strongly on fewer bets (empirical Bayes; the spread of real skill is estimated from all records). `proven` is decided across all records together (false-discovery rate 20%), so it means too good to be luck even allowing for how many bettors were checked. `credit` is the edge a card may use: `adj`, or for a proven record the conservative bound if higher, capped at 8 points.
+- **Since listing:** `data/listed.json` remembers when a bettor was first listed in a sport. `since` is their record on bets placed after that date, the only part of the record that was not used to pick them. A bettor clearly behind since listing (20+ bets, more than one standard error below the price) is marked `cold` and their bets are not shown until that changes.
+
+On 23 Nov data the screen found the records close to what luck alone produces: about three of roughly 430 sport records stood out. Most listed bettors therefore carry a credit of about one point.
+
 ## Which bets are shown
 
-Every real bet a ranked bettor has on an upcoming game is considered: at least $200 and at least half their usual bet. Each gets a trust score (`trust()` in `cloudflare/scanner.mjs`):
+A listed bettor's bet on an upcoming game is considered when it is in a sport they are listed in, worth at least $200 and at least their usual bet. Each gets a trust score (`trust()` in `cloudflare/scanner.mjs`):
 
-- **Start:** the bettor's expected edge in that sport, which is their record in the sport blended with their overall record. A thin sport record counts for less, a record that could still be luck is marked down 40%, and the figure is capped at 12 points.
-- **Raised** for a bigger-than-usual bet (up to +45%) and for each other ranked bettor on the same side.
-- **Lowered** for each ranked bettor on the other side and by any rise in price since the bettor bought.
+- **Start:** the bettor's credited edge in that sport (see sport specialists above). Outside the sports they are listed in it is zero.
+- **Raised** for a bigger-than-usual bet (up to +45%) and for each other bettor listed in that sport on the same side.
+- **Lowered** for each bettor listed in that sport on the other side and by any rise in price since the bettor bought.
 
-Cards are ordered by trust, one per game. A bet is left out if the score is not positive, if the bettor is behind in that sport over 20+ bets, or if the price is more than 6¢ above their entry. Ratings: High (6+ points and either a proven bettor or agreement), Solid (3+), Lean. The estimated win chance on each card is the current price plus the trust score; it is a rough estimate, not a measured probability.
+Cards are ordered by trust, one per game. A bet is left out if the score is not positive or if the price is more than 6¢ above their entry. Ratings: High (a proven record, 2+ points, nobody listed against), Solid (proven, or at least twice their usual bet, or backed by another listed bettor), Lean (the rest). Lean bets are not posted; the reply says how many were held back. The estimated win chance on each card is the current price plus the trust score; it is a rough estimate, not a measured probability.
 
 ## Alerts
 
