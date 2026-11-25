@@ -107,3 +107,16 @@ test('roster wallets are unique and valid, and the uncopyable list is well forme
  const ws=ROSTER.map(t=>t.wallet.toLowerCase());assert.equal(new Set(ws).size,ws.length);assert.ok(ws.every(w=>/^0x[0-9a-f]{40}$/.test(w)));
  assert.ok(UNCOPYABLE.size>0);assert.ok([...UNCOPYABLE].every(w=>/^0x[0-9a-f]{40}$/.test(w)));
 });
+import {fetchWallet,fitResult} from './scanner.mjs';
+test('a wallet\'s scan result stays small: no repeated raw fields or bettor record per position, and an enormous wallet is trimmed to fit',async()=>{
+ const rawRow=i=>({token_id:'t'+i,condition_id:'0x'+String(i).padStart(64,'0'),current_size:1000,avg_price:.5,entry_cost_usdc:500,total_cost_usdc:505,current_price:.5,current_value:10+i,event_slug:'nba-game-'+i,outcome:'Yes',outcome_index:0,end_date:'2026-12-01',first_entry_at:1,last_event_at:2,opposite_token_id:'o'+i,redeemable:false,title:'A very long market title '.repeat(12)});
+ const get=async url=>new URL(url).pathname==='/v2/positions'?{data:Array.from({length:600},(_,i)=>rawRow(i)),pagination:{next_cursor:null}}:{data:[],pagination:{next_cursor:null}};
+ const t={name:'Big',wallet:W(9),spec:'x'.repeat(200),sharp:sharp()},v=await fetchWallet(t,get,now),p=v.positions[0];
+ assert.equal(v.positions.length,600);assert.equal('token_id'in p,false);assert.equal('sharp'in p,false);assert.equal('spec'in p,false);assert.equal(p.asset,'t0');assert.equal(p.conditionId,rawRow(0).condition_id);assert.equal(p.sizeMultiple,1);assert.ok(p.title.length<=120);
+ assert.ok(JSON.stringify(v).length<600*800);                                             // well under a kilobyte per position
+ assert.equal(fitResult(v),v);
+ const cut=fitResult(v,100000);assert.ok(JSON.stringify(cut).length<=100000);assert.ok(cut.positions.length<600&&cut.positions.length>0);assert.ok(cut.positions.every(x=>x.currentValue>=cut.trimmedBelow));
+ // collect() puts the bettor's record back on each position
+ const events=async url=>new URL(url).pathname==='/events'?[]:get(url),scan=await collect(events,[t],{sport:'All',limit:10,settings:{...DEFAULTS},asOf:now});
+ assert.equal(scan.positions[0].sharp,t.sharp);assert.equal(scan.positions[0].spec,t.spec);
+});

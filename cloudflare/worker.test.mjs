@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {compactWalletPage,pool,validateOptions,rankUnique,assessOne,CORE,roster,collect,postable} from './scanner.mjs';
+import {compactWalletPage,pool,validateOptions,rankUnique,assessOne,CORE,roster,collect,postable,fitResult} from './scanner.mjs';
 import E from '../engine.js';
 import {convictionReport} from './discord.mjs';
 import {scanReport} from './scan-report.mjs';
@@ -12,8 +12,8 @@ function harness(readPublic,fetchWallet=async()=>({positions:[],activity:[]}),de
  const values=new Map(),created=[],sleeps=[];
  const env={CACHE:{get:async k=>values.has(k)?values.get(k):null,put:async(k,v)=>values.set(k,JSON.parse(v))},SCANS:{create:async x=>{created.push(x);return{};},createBatch:async x=>{created.push(...x);for(const j of x)if(j.params?.kind==='wallet')values.set('result/'+j.id,{ok:true,value:{positions:[],activity:[]}});return[];}}};
  const step={do:async(_n,options,fn)=>(fn||options)(),sleep:async(n,d)=>{sleeps.push([n,d]);},sleepUntil:async(n,d)=>{sleeps.push([n,d]);}};
- deps={rankUnique,assessOne,scanReport,selectWatchlist,postable,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey,...Scorecard,...deps};
- const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet','compactWalletPage','deps','const {E,roster,collect,pool,convictionReport,editReply,postable,rankUnique,assessOne,scanReport,selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey,LATEST,RESULTS,LEDGER,ledgerKey,alertKey,ledgerEntries,appendLedger,firstPerGame,summarize,scorecardPayload}=deps;'+source+';return {historyGet,launchBatch,result,PolysharpWorkflow,observeMarket,finishScan,scorecardJob,scheduled};')(class{},readPublic,fetchWallet,compactWalletPage,deps);
+ deps={rankUnique,assessOne,scanReport,selectWatchlist,postable,fitResult,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey,...Scorecard,...deps};
+ const funcs=new Function('WorkflowEntrypoint','readPublic','fetchWallet','compactWalletPage','deps','const {E,roster,collect,pool,convictionReport,editReply,postable,fitResult,rankUnique,assessOne,scanReport,selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey,LATEST,RESULTS,LEDGER,ledgerKey,alertKey,ledgerEntries,appendLedger,firstPerGame,summarize,scorecardPayload}=deps;'+source+';return {historyGet,launchBatch,result,PolysharpWorkflow,observeMarket,finishScan,scorecardJob,scheduled};')(class{},readPublic,fetchWallet,compactWalletPage,deps);
  return{...funcs,env,step,values,created,sleeps};
 }
 test('history resumes beyond one Free-plan request budget without publishing a truncated cohort',async()=>{

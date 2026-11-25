@@ -3,7 +3,7 @@ import E from '../engine.js';
 import {scanReport} from './scan-report.mjs';
 import {selectWatchlist,freezeRun,putPrepared,journalKey,publicationKey,settlementKey,closeKey} from './journal.mjs';
 import {handle,report,convictionReport,predictionsReport,editReply} from './discord.mjs';
-import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage,postable} from './scanner.mjs';
+import {CORE,roster,collect,quote,assessOne,rankUnique,readPublic,buildHistory,pool,fetchWallet,compactWalletPage,postable,fitResult} from './scanner.mjs';
 
 import {predictionsRoster,fetchPredictionsWallet,rankPredictions} from './predictions.mjs';
 import {LATEST,RESULTS,LEDGER,ledgerKey,alertKey,ledgerEntries,appendLedger,firstPerGame,summarize,scorecardPayload} from './scorecard.mjs';
@@ -96,7 +96,7 @@ export class PolysharpWorkflow extends WorkflowEntrypoint{
       return {continuing:true,sequence};
      }throw error;
     }
-    output={ok:true,value};
+    output={ok:true,value:job.kind==='wallet'&&!job.predictions?fitResult(value):value};
    }catch{output={ok:false};}
    await step.do('save-child-result',()=>this.env.CACHE.put('result/'+(job.resultId||event.instanceId),JSON.stringify(output),{expirationTtl:900}));
    return {ok:output.ok};
